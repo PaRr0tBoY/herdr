@@ -260,6 +260,11 @@ fn encode_legacy(key: TerminalKey) -> Vec<u8> {
         if let Some(bytes) = encode_modified_special(key.code, mods) {
             return bytes;
         }
+        // Shift+Enter: encode as CSI u so applications can distinguish
+        // it from plain Enter (e.g. agent multiline input).
+        if mods == KeyModifiers::SHIFT && key.code == KeyCode::Enter {
+            return b"\x1b[13;2u".to_vec();
+        }
     }
 
     // Alt modifier on character keys: prefix with ESC
@@ -570,9 +575,9 @@ mod tests {
     }
 
     #[test]
-    fn legacy_shift_enter_is_just_cr() {
+    fn legacy_shift_enter_is_csi_u() {
         let key = KeyEvent::new(KeyCode::Enter, KeyModifiers::SHIFT);
-        assert_eq!(encode_key(key, KeyboardProtocol::Legacy), vec![b'\r']);
+        assert_eq!(encode_key(key, KeyboardProtocol::Legacy), b"\x1b[13;2u");
     }
 
     #[test]
