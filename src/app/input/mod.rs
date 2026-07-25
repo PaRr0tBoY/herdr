@@ -93,6 +93,7 @@ impl App {
             Mode::Prefix => self.handle_prefix_key(key),
             Mode::Navigate => self.handle_navigate_key(key),
             Mode::Copy => self.handle_copy_mode_key(key),
+            Mode::NewTabType => self.handle_new_tab_type_key(key),
             _ => match self.state.mode {
                 Mode::Onboarding => self.handle_onboarding_key(key_event),
                 Mode::ReleaseNotes => self.handle_release_notes_key(key_event),
@@ -115,6 +116,7 @@ impl App {
                 Mode::Navigator => {
                     handle_navigator_key(&mut self.state, &self.terminal_runtimes, key_event)
                 }
+                Mode::NewTabType => unreachable!(),
                 Mode::Terminal => unreachable!(),
             },
         }

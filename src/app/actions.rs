@@ -3277,6 +3277,52 @@ impl AppState {
 // Tests
 // ---------------------------------------------------------------------------
 
+/// Sync tab names from agent OSC titles for OMP and Claude Code.
+pub(crate) fn sync_tab_agent_names(
+    workspaces: &mut [crate::workspace::Workspace],
+    terminals: &std::collections::HashMap<
+        crate::terminal::TerminalId,
+        crate::terminal::TerminalState,
+    >,
+    terminal_runtimes: &crate::terminal::TerminalRuntimeRegistry,
+) -> bool {
+    let synced: &[crate::detect::Agent] =
+        &[crate::detect::Agent::Omp, crate::detect::Agent::Claude];
+    let mut changed = false;
+    for ws in workspaces {
+        for tab in &mut ws.tabs {
+            if tab.custom_name.is_some() {
+                continue;
+            }
+            let mut new_title: Option<String> = None;
+            for pane in tab.panes.values() {
+                let Some(t) = terminals.get(&pane.attached_terminal_id) else {
+                    continue;
+                };
+                let matches = t
+                    .agent_name
+                    .as_deref()
+                    .is_some_and(|n| synced.iter().any(|a| crate::detect::agent_label(*a) == n));
+                if !matches {
+                    continue;
+                }
+                if let Some(rt) = terminal_runtimes.get(&pane.attached_terminal_id) {
+                    let title = rt.agent_osc_title();
+                    if !title.is_empty() && tab.synced_agent_name.as_deref() != Some(&title) {
+                        new_title = Some(title);
+                        break;
+                    }
+                }
+            }
+            if let Some(title) = new_title {
+                tab.set_synced_agent_name(title);
+                changed = true;
+            }
+        }
+    }
+    changed
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

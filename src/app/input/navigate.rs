@@ -7,6 +7,7 @@ use std::{
 
 use bytes::Bytes;
 use crossterm::event::KeyCode;
+use crossterm::event::KeyEventKind;
 #[cfg(test)]
 use crossterm::event::KeyEvent;
 use ratatui::layout::Direction;
@@ -176,6 +177,28 @@ impl App {
         }
     }
 
+    pub(super) fn handle_new_tab_type_key(&mut self, key: TerminalKey) {
+        // Only respond to key press events, not release.
+        if key.kind != KeyEventKind::Press {
+            return;
+        }
+        match key.code {
+            KeyCode::Esc => {
+                self.state.mode = Mode::Terminal;
+                self.state.selected_new_tab_type = None;
+                self.state.new_tab_type_items.clear();
+            }
+            KeyCode::Char(c) if c >= '1' && c <= '9' => {
+                let idx = (c as u8 - b'1') as usize;
+                if idx < self.state.new_tab_type_items.len() {
+                    self.state.selected_new_tab_type = Some(idx);
+                    super::modal::open_new_tab_dialog(&mut self.state);
+                }
+            }
+            _ => {}
+        }
+    }
+
     pub(super) fn execute_tui_navigate_action(
         &mut self,
         action: NavigateAction,
@@ -284,21 +307,7 @@ impl App {
             }
             NavigateAction::NewTab => {
                 if self.state.active.is_some() {
-                    if self.state.prompt_new_tab_name {
-                        super::modal::open_new_tab_dialog(&mut self.state);
-                    } else {
-                        self.runtime_tab_create(
-                            "tui.key.tab.create",
-                            crate::api::schema::TabCreateParams {
-                                workspace_id: None,
-                                cwd: None,
-                                focus: true,
-                                label: None,
-                                env: Default::default(),
-                            },
-                        );
-                        leave_navigate_mode(&mut self.state);
-                    }
+                    super::modal::open_new_tab_type_picker(&mut self.state);
                 }
             }
             NavigateAction::RenameTab => {
@@ -1615,12 +1624,7 @@ pub(super) fn execute_navigate_action_in_context(
         }
         NavigateAction::NewTab => {
             if state.active.is_some() {
-                if state.prompt_new_tab_name {
-                    super::modal::open_new_tab_dialog(state);
-                } else {
-                    state.request_new_tab = true;
-                    leave_navigate_mode(state);
-                }
+                super::modal::open_new_tab_type_picker(state);
             }
         }
         NavigateAction::RenameTab => super::modal::open_rename_active_tab(state, false),
@@ -3319,11 +3323,10 @@ navigate_pane_down = "ctrl+j"
 
         execute_navigate_action(&mut state, NavigateAction::NewTab);
 
-        assert_eq!(state.mode, Mode::RenameTab);
-        assert!(state.creating_new_tab);
-        assert_eq!(state.name_input, "2");
-        assert!(state.name_input_replace_on_type);
-        assert!(!state.request_new_tab);
+        // NewTab now opens the type picker; user must pick a type first.
+        assert_eq!(state.mode, Mode::NewTabType);
+        assert!(!state.new_tab_type_items.is_empty());
+        assert!(!state.creating_new_tab);
         assert_eq!(state.workspaces[0].tabs.len(), 1);
     }
 
@@ -3334,10 +3337,10 @@ navigate_pane_down = "ctrl+j"
 
         execute_navigate_action(&mut state, NavigateAction::NewTab);
 
-        assert_eq!(state.mode, Mode::Terminal);
+        // Type picker opens regardless of prompt_new_tab_name.
+        assert_eq!(state.mode, Mode::NewTabType);
+        assert!(!state.new_tab_type_items.is_empty());
         assert!(!state.creating_new_tab);
-        assert!(state.request_new_tab);
-        assert!(state.requested_new_tab_name.is_none());
     }
 
     #[test]

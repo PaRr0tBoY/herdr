@@ -475,11 +475,16 @@ impl Workspace {
 
     pub fn tab_display_name(&self, tab_idx: usize) -> Option<String> {
         let tab = self.tabs.get(tab_idx)?;
-        Some(
-            tab.custom_name
-                .clone()
-                .unwrap_or_else(|| (tab_idx + 1).to_string()),
-        )
+        let label = tab
+            .custom_name
+            .clone()
+            .or_else(|| tab.synced_agent_name.clone());
+        // Dynamic index-based numbering: closing a tab renumbers the rest.
+        let display_number = tab_idx + 1;
+        match label {
+            Some(name) if !name.is_empty() => Some(format!("{} {}", display_number, name)),
+            _ => Some(display_number.to_string()),
+        }
     }
 
     pub fn switch_tab(&mut self, idx: usize) {
@@ -1254,6 +1259,7 @@ impl Workspace {
         panes.insert(root_id, PaneState::new(terminal_id));
         let tab = Tab {
             custom_name: None,
+            synced_agent_name: None,
             number: 1,
             root_pane: root_id,
             layout,
@@ -1310,6 +1316,7 @@ impl Workspace {
         panes.insert(root_id, PaneState::new(TerminalId::alloc()));
         let tab = Tab {
             custom_name: name.map(str::to_string),
+            synced_agent_name: None,
             number: self.next_public_tab_number,
             root_pane: root_id,
             layout,

@@ -890,6 +890,8 @@ impl HeadlessServer {
                 cwd: None,
                 focus: true,
                 label,
+                shell_override: None,
+                command_override: None,
                 env: Default::default(),
             }),
         )

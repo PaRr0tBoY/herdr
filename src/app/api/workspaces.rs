@@ -313,6 +313,8 @@ mod tests {
                 cwd: None,
                 focus: true,
                 label: None,
+                shell_override: None,
+                command_override: None,
                 env: Default::default(),
             },
         );
