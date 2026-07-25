@@ -1623,6 +1623,18 @@ impl GhosttyPaneTerminal {
             return crate::input::encode_terminal_key(key, protocol);
         }
 
+        // Shift+Enter in legacy mode: the ghostty encoder produces
+        // modifyOtherKeys format (\x1b[27;2;13~) which child applications
+        // that have not negotiated keyboard enhancement cannot parse.
+        // Use the herdr encoder instead, which emits CSI u (\x1b[13;2u)
+        // so applications like agents can distinguish it from plain Enter.
+        if !protocol.reports_event_types()
+            && key.code == crossterm::event::KeyCode::Enter
+            && key.modifiers == crossterm::event::KeyModifiers::SHIFT
+        {
+            return crate::input::encode_terminal_key(key, protocol);
+        }
+
         let Some(event) = ghostty_key_event_from_terminal_key(key) else {
             return crate::input::encode_terminal_key(key, protocol);
         };
@@ -3849,7 +3861,8 @@ mod tests {
 
         let key = crate::input::parse_terminal_key_sequence("\x1b[13;2u").unwrap();
         let encoded = pane.encode_terminal_key(key, crate::input::KeyboardProtocol::Legacy);
-        assert_eq!(encoded, b"\x1b[27;2;13~");
+        // Legacy pane: Shift+Enter is encoded as CSI u.
+        assert_eq!(encoded, b"\x1b[13;2u");
     }
 
     #[test]
@@ -3974,7 +3987,24 @@ mod tests {
         let key = crate::input::parse_terminal_key_sequence("\x1b[13;2u").unwrap();
         let encoded = pane.encode_terminal_key(key, crate::input::KeyboardProtocol::Legacy);
 
-        assert_eq!(encoded, b"\x1b[27;2;13~");
+        // Pane uses Legacy protocol (no Kitty keyboard), so Shift+Enter
+        // is encoded as CSI u regardless of modifyOtherKeys state.
+        assert_eq!(encoded, b"\x1b[13;2u");
+    }
+
+    #[test]
+    fn ghostty_legacy_pane_encodes_shift_enter_as_csi_u() {
+        let (tx, _rx) = mpsc::channel(4);
+        let terminal = crate::ghostty::Terminal::new(80, 24, 0).unwrap();
+        let pane = GhosttyPaneTerminal::new(terminal, tx).unwrap();
+
+        let key = crate::input::TerminalKey::new(
+            crossterm::event::KeyCode::Enter,
+            crossterm::event::KeyModifiers::SHIFT,
+        );
+        let encoded = pane.encode_terminal_key(key, crate::input::KeyboardProtocol::Legacy);
+
+        assert_eq!(encoded, b"\x1b[13;2u");
     }
 
     #[test]
