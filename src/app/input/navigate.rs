@@ -7,7 +7,6 @@ use std::{
 
 use bytes::Bytes;
 use crossterm::event::KeyCode;
-use crossterm::event::KeyEventKind;
 #[cfg(test)]
 use crossterm::event::KeyEvent;
 use ratatui::layout::Direction;
@@ -177,11 +176,7 @@ impl App {
         }
     }
 
-    pub(super) fn handle_new_tab_type_key(&mut self, key: TerminalKey) {
-        // Only respond to key press events, not release.
-        if key.kind != KeyEventKind::Press {
-            return;
-        }
+    pub(crate) fn handle_new_tab_type_key(&mut self, key: TerminalKey) {
         match key.code {
             KeyCode::Esc => {
                 self.state.mode = Mode::Terminal;

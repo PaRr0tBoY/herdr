@@ -1813,7 +1813,9 @@ impl App {
             Mode::Navigator => {
                 input::handle_navigator_key(&mut self.state, &self.terminal_runtimes, key_event);
             }
-            Mode::NewTabType => {}
+            Mode::NewTabType => {
+                self.handle_new_tab_type_key(key);
+            }
             Mode::Terminal => {
                 // Should not be called in terminal mode.
             }
