@@ -5405,9 +5405,10 @@ last_pane = "prefix+tab"
 
         app.route_client_input(b"\x1b[13;2u".to_vec());
 
+        // Legacy pane: Shift+Enter is encoded as CSI u.
         assert_eq!(
             rx.recv().await.unwrap(),
-            bytes::Bytes::from_static(b"\x1b[27;2;13~")
+            bytes::Bytes::from_static(b"\x1b[13;2u")
         );
     }
 
