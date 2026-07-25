@@ -830,8 +830,19 @@ fn automatic_selection_style(
 }
 
 fn automatic_selection_bg(p: &Palette, host_theme: crate::terminal_theme::TerminalTheme) -> Color {
-    let Some(background) = host_theme.background.map(terminal_theme_to_rgb) else {
-        return selection_palette_background(p);
+    let (background, mix_amount) = match host_theme.background.map(terminal_theme_to_rgb) {
+        Some(bg) => (bg, 0.28),
+        None => {
+            let fallback = if p.panel_bg == Color::Reset {
+                p.surface_dim
+            } else {
+                p.panel_bg
+            };
+            match color_to_rgb(fallback) {
+                Some(rgb) => (rgb, 0.40),
+                None => return fallback,
+            }
+        }
     };
 
     let target = if relative_luminance(background) < 0.5 {
@@ -839,16 +850,8 @@ fn automatic_selection_bg(p: &Palette, host_theme: crate::terminal_theme::Termin
     } else {
         (0, 0, 0)
     };
-    let selected = mix_rgb(background, target, 0.28);
+    let selected = mix_rgb(background, target, mix_amount);
     Color::Rgb(selected.0, selected.1, selected.2)
-}
-
-fn selection_palette_background(p: &Palette) -> Color {
-    if p.panel_bg == Color::Reset {
-        p.surface_dim
-    } else {
-        p.panel_bg
-    }
 }
 
 fn terminal_theme_to_rgb(color: crate::terminal_theme::RgbColor) -> Rgb {
