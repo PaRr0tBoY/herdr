@@ -12,6 +12,7 @@ use crate::app::AppState;
 const MIN_TAB_WIDTH: u16 = 8;
 const NEW_TAB_WIDTH: u16 = 3;
 const TAB_SCROLL_BUTTON_WIDTH: u16 = 3;
+pub(crate) const NOTE_BUTTON_WIDTH: u16 = 6;
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct TabBarView {
@@ -20,6 +21,7 @@ pub(crate) struct TabBarView {
     pub scroll_left_hit_area: Rect,
     pub scroll_right_hit_area: Rect,
     pub new_tab_hit_area: Rect,
+    pub note_hit_area: Rect,
 }
 
 fn tab_width(ws: &crate::workspace::Workspace, tab_idx: usize) -> u16 {
@@ -131,6 +133,7 @@ pub(crate) fn compute_tab_bar_view(
             scroll_left_hit_area: Rect::default(),
             scroll_right_hit_area: Rect::default(),
             new_tab_hit_area: Rect::default(),
+            note_hit_area: Rect::default(),
         };
     }
 
@@ -148,7 +151,16 @@ pub(crate) fn compute_tab_bar_view(
         let new_tab_hit_area = Rect::new(
             new_tab_x,
             area.y,
-            area_right.saturating_sub(new_tab_x).min(NEW_TAB_WIDTH),
+            (area_right.saturating_sub(NOTE_BUTTON_WIDTH))
+                .saturating_sub(new_tab_x)
+                .min(NEW_TAB_WIDTH),
+            1,
+        );
+        let note_x = area_right.saturating_sub(NOTE_BUTTON_WIDTH);
+        let note_hit_area = Rect::new(
+            note_x,
+            area.y,
+            area_right.saturating_sub(note_x).min(NOTE_BUTTON_WIDTH),
             1,
         );
         return TabBarView {
@@ -157,12 +169,14 @@ pub(crate) fn compute_tab_bar_view(
             scroll_left_hit_area: Rect::default(),
             scroll_right_hit_area: Rect::default(),
             new_tab_hit_area,
+            note_hit_area,
         };
     }
 
     let left_hit_area = Rect::new(area.x, area.y, TAB_SCROLL_BUTTON_WIDTH.min(area.width), 1);
     let tab_area_x = left_hit_area.x + left_hit_area.width;
     let reserved_trailing_width = NEW_TAB_WIDTH.saturating_add(TAB_SCROLL_BUTTON_WIDTH);
+    let reserved_trailing_width = reserved_trailing_width.saturating_add(NOTE_BUTTON_WIDTH);
     let tab_area_right = area_right.saturating_sub(reserved_trailing_width);
     let tab_area = Rect::new(
         tab_area_x,
@@ -191,7 +205,16 @@ pub(crate) fn compute_tab_bar_view(
     let new_tab_hit_area = Rect::new(
         new_tab_x,
         area.y,
-        area_right.saturating_sub(new_tab_x).min(NEW_TAB_WIDTH),
+        (area_right.saturating_sub(NOTE_BUTTON_WIDTH))
+            .saturating_sub(new_tab_x)
+            .min(NEW_TAB_WIDTH),
+        1,
+    );
+    let note_x = area_right.saturating_sub(NOTE_BUTTON_WIDTH);
+    let note_hit_area = Rect::new(
+        note_x,
+        area.y,
+        area_right.saturating_sub(note_x).min(NOTE_BUTTON_WIDTH),
         1,
     );
 
@@ -201,6 +224,7 @@ pub(crate) fn compute_tab_bar_view(
         scroll_left_hit_area: left_hit_area,
         scroll_right_hit_area: right_hit_area,
         new_tab_hit_area,
+        note_hit_area,
     }
 }
 
@@ -364,6 +388,19 @@ pub(super) fn render_tab_bar(app: &AppState, frame: &mut Frame, area: Rect) {
         frame.render_widget(
             Paragraph::new(" + ").style(Style::default().fg(p.overlay1)),
             app.view.new_tab_hit_area,
+        );
+    }
+
+    // Note popup toggle button.
+    if app.mouse_capture && app.view.note_hit_area.width > 0 {
+        let style = if app.note_popup_active {
+            Style::default().fg(p.panel_bg).bg(p.accent)
+        } else {
+            Style::default().fg(p.overlay1)
+        };
+        frame.render_widget(
+            Paragraph::new(" note ").style(style),
+            app.view.note_hit_area,
         );
     }
 

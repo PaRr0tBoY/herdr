@@ -425,6 +425,11 @@ fn restore_workspace(
             next_public_tab_number,
             active_tab: snap.active_tab.min(tabs.len().saturating_sub(1)),
             tabs,
+            note_popup_size: match (snap.note_popup_width, snap.note_popup_height) {
+                (Some(w), Some(h)) => Some((w, h)),
+                _ => None,
+            },
+            note_buffer: String::new(),
             #[cfg(test)]
             test_runtimes: HashMap::new(),
         })
@@ -1204,6 +1209,8 @@ mod tests {
                     root_pane: Some(0),
                 }],
                 active_tab: 0,
+                note_popup_width: None,
+                note_popup_height: None,
             }],
             active: Some(0),
             selected: 0,
@@ -1298,6 +1305,8 @@ mod tests {
                     root_pane: Some(10),
                 }],
                 active_tab: 0,
+                note_popup_width: None,
+                note_popup_height: None,
             }],
             active: Some(0),
             selected: 0,
@@ -1409,6 +1418,8 @@ mod tests {
                     },
                 ],
                 active_tab: 3,
+                note_popup_width: None,
+                note_popup_height: None,
             }],
             active: Some(0),
             selected: 0,
@@ -1472,6 +1483,8 @@ mod tests {
                 root_pane: Some(10),
             }],
             active_tab: 0,
+            note_popup_width: None,
+            note_popup_height: None,
         };
         let mut next_public_pane_number = 1;
 
@@ -1522,6 +1535,8 @@ mod tests {
                     root_pane: Some(0),
                 }],
                 active_tab: 0,
+                note_popup_width: None,
+                note_popup_height: None,
             }],
             active: Some(0),
             selected: 0,
@@ -1717,6 +1732,8 @@ mod tests {
                     root_pane: Some(0),
                 }],
                 active_tab: 0,
+                note_popup_width: None,
+                note_popup_height: None,
             }],
             active: Some(0),
             selected: 0,

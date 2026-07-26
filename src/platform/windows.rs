@@ -211,6 +211,59 @@ fn scrollback_editor_argv_with_env(
     Ok(argv)
 }
 
+/// Editor argv for opening a note file. Unlike `scrollback_editor_argv`, the
+/// file is not deleted after the editor exits.
+pub(crate) fn note_editor_argv(path: &std::path::Path) -> std::io::Result<Vec<String>> {
+    let editor = std::env::var("VISUAL")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .or_else(|| {
+            std::env::var("EDITOR")
+                .ok()
+                .filter(|value| !value.trim().is_empty())
+        });
+    note_editor_argv_with_env_and_probe(path, editor.as_deref())
+}
+
+fn note_editor_argv_with_env_and_probe(
+    path: &std::path::Path,
+    editor: Option<&str>,
+) -> std::io::Result<Vec<String>> {
+    // If VISUAL or EDITOR is set, use it.
+    if let Some(editor) = editor.filter(|v| !v.trim().is_empty()) {
+        let mut argv = command_line_to_argv(editor).ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("failed to parse editor command {editor:?}"),
+            )
+        })?;
+        if !argv.is_empty() {
+            argv.push(path.display().to_string());
+            return Ok(argv);
+        }
+    }
+    // Probe for common terminal editors in PATH.
+    for candidate in ["nvim", "vim", "vi"] {
+        let mut cmd = std::process::Command::new("where");
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+        if let Ok(output) = cmd
+            .arg(candidate)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+        {
+            if output.success() {
+                return Ok(vec![candidate.to_string(), path.display().to_string()]);
+            }
+        }
+    }
+    // Fall back to notepad.
+    Ok(vec!["notepad.exe".to_string(), path.display().to_string()])
+}
+
 pub(crate) fn configure_background_command_platform(command: &mut std::process::Command) {
     use std::os::windows::process::CommandExt;
 

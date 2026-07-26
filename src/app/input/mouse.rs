@@ -58,6 +58,7 @@ pub(super) enum MouseAction {
         menu: ContextMenuState,
         idx: usize,
     },
+    ToggleNotePopup,
 }
 
 enum MobileMouseResult {
@@ -533,6 +534,9 @@ impl AppState {
                     open_new_tab_type_picker(self);
                     return None;
                 }
+                if self.on_note_button(mouse.column, mouse.row) {
+                    return Some(MouseAction::ToggleNotePopup);
+                }
 
                 if in_sidebar {
                     if self.on_sidebar_toggle(mouse.column, mouse.row) {
@@ -815,6 +819,19 @@ impl AppState {
                         DragTarget::ReleaseNotesScrollbar { .. }
                         | DragTarget::ProductAnnouncementScrollbar { .. }
                         | DragTarget::KeybindHelpScrollbar { .. } => {}
+                        DragTarget::NotePopupResize {
+                            start_rect,
+                            start_col,
+                            start_row,
+                        } => {
+                            self.handle_note_popup_resize_drag(
+                                mouse.column,
+                                mouse.row,
+                                *start_rect,
+                                *start_col,
+                                *start_row,
+                            );
+                        }
                     }
                 }
             }
@@ -1359,6 +1376,15 @@ impl AppState {
 
     pub(super) fn on_new_tab_button(&self, col: u16, row: u16) -> bool {
         let area = self.view.new_tab_hit_area;
+        area.width > 0
+            && row >= area.y
+            && row < area.y + area.height
+            && col >= area.x
+            && col < area.x + area.width
+    }
+
+    pub(super) fn on_note_button(&self, col: u16, row: u16) -> bool {
+        let area = self.view.note_hit_area;
         area.width > 0
             && row >= area.y
             && row < area.y + area.height

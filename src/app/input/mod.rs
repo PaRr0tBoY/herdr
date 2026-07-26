@@ -77,6 +77,11 @@ impl App {
         &mut self,
         key: TerminalKey,
     ) -> Option<super::TerminalInputTarget> {
+        // Note popup captures all keyboard input.
+        if self.state.note_popup_active {
+            self.handle_note_popup_key(key);
+            return None;
+        }
         if self.state.popup_pane.is_some() {
             return self.handle_terminal_key(key).await;
         }
@@ -124,6 +129,12 @@ impl App {
     }
 
     pub(super) async fn handle_paste(&mut self, text: String) {
+        if self.state.note_popup_active {
+            if let Some(textarea) = &mut self.state.note_textarea {
+                textarea.insert_str(text);
+            }
+            return;
+        }
         if self.state.popup_pane.is_some() {
             if let Some(runtime) = self.popup_runtime() {
                 let _ = runtime.send_paste(text).await;
@@ -292,6 +303,11 @@ impl App {
             _ => {}
         }
 
+        // Note popup overlay: click outside → close, resize drag → handle.
+        if self.state.note_popup_active {
+            self.handle_note_popup_mouse(mouse);
+            return;
+        }
         if self.state.popup_pane.is_some() {
             self.handle_popup_mouse(mouse);
             return;
@@ -383,6 +399,11 @@ impl App {
                     MouseAction::ContextMenu { menu, idx } => {
                         self.apply_context_menu_action_via_api(menu, idx)
                     }
+                    MouseAction::ToggleNotePopup => {
+                        if let Err(err) = self.toggle_note_popup() {
+                            tracing::warn!(err = %err, "failed to toggle note popup");
+                        }
+                    }
                 }
             }
             if matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left))
@@ -469,6 +490,121 @@ impl App {
         rt.scroll_reset();
         if let Err(err) = rt.try_send_bytes(Bytes::from(bytes)) {
             warn!(err = %err, kind = ?mouse.kind, "failed to forward popup mouse event");
+        }
+    }
+
+    /// Handle mouse events for the note popup overlay.
+    fn handle_note_popup_mouse(&mut self, mouse: MouseEvent) {
+        use crossterm::event::{MouseButton, MouseEventKind};
+        use ratatui::layout::Rect;
+
+        let Some(outer) = self.state.note_popup_outer_rect else {
+            return;
+        };
+
+        // Resize corner: bottom-left 3x1 area.
+        let corner = Rect::new(
+            outer.x,
+            outer.y + outer.height.saturating_sub(1),
+            3.min(outer.width),
+            1.min(outer.height),
+        );
+
+        match mouse.kind {
+            MouseEventKind::Down(MouseButton::Left) => {
+                if mouse.column >= corner.x
+                    && mouse.column < corner.x + corner.width
+                    && mouse.row >= corner.y
+                    && mouse.row < corner.y + corner.height
+                {
+                    self.state.drag = Some(crate::app::state::DragState {
+                        target: crate::app::state::DragTarget::NotePopupResize {
+                            start_rect: outer,
+                            start_col: mouse.column,
+                            start_row: mouse.row,
+                        },
+                    });
+                    return;
+                }
+                if mouse.column < outer.x
+                    || mouse.column >= outer.x + outer.width
+                    || mouse.row < outer.y
+                    || mouse.row >= outer.y + outer.height
+                {
+                    self.close_note_popup();
+                }
+            }
+            MouseEventKind::Drag(MouseButton::Left) => {
+                if let Some(crate::app::state::DragState {
+                    target:
+                        crate::app::state::DragTarget::NotePopupResize {
+                            start_rect,
+                            start_col,
+                            start_row,
+                        },
+                }) = &self.state.drag
+                {
+                    self.state.handle_note_popup_resize_drag(
+                        mouse.column,
+                        mouse.row,
+                        *start_rect,
+                        *start_col,
+                        *start_row,
+                    );
+                }
+            }
+            MouseEventKind::Up(MouseButton::Left) => {
+                self.state.drag = None;
+            }
+            _ => {}
+        }
+    }
+
+    /// Route keyboard events to the note popup TextArea.
+    fn handle_note_popup_key(&mut self, key: TerminalKey) {
+        let Some(textarea) = &mut self.state.note_textarea else {
+            return;
+        };
+        let key_event = key.as_key_event();
+        // Ctrl+S: save to file.
+        if key
+            .modifiers
+            .contains(crossterm::event::KeyModifiers::CONTROL)
+            && key.code == crossterm::event::KeyCode::Char('s')
+        {
+            self.save_note_to_file();
+            return;
+        }
+        if key.code == crossterm::event::KeyCode::Esc {
+            self.close_note_popup();
+            return;
+        }
+        let input: ratatui_textarea::Input = key_event.into();
+        tracing::debug!(?key.code, ?key.modifiers, "note popup key");
+        textarea.input(input);
+    }
+
+    /// Save note content to the workspace's .md file.
+    fn save_note_to_file(&mut self) {
+        let Some(textarea) = &self.state.note_textarea else {
+            return;
+        };
+        let content: String = textarea
+            .lines()
+            .iter()
+            .map(|l| l.as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+        let Some(ws_id) = &self.state.note_popup_workspace_id else {
+            return;
+        };
+        let path = crate::note::note_path(ws_id);
+        // Ensure parent dir exists.
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Err(err) = std::fs::write(&path, &content) {
+            tracing::warn!(err = %err, path = %path.display(), "failed to save note");
         }
     }
 
