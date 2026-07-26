@@ -430,7 +430,7 @@ pub(super) fn render_note_popup(app: &AppState, frame: &mut Frame) {
         .as_ref()
         .map(|id| {
             let path = crate::note::note_path(id);
-            format!(" {}  Ctrl+S save", path.display())
+            format!(" {}  Ctrl+S save  ·  paste with Ctrl+V", path.display())
         })
         .unwrap_or_else(|| " note".to_string());
     let block = ratatui::widgets::Block::default()
