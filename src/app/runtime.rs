@@ -108,6 +108,15 @@ impl App {
         let previous_mode = self.state.mode;
         let changed = match event {
             crate::raw_input::RawInputEvent::Key(key) => {
+                // DEBUG: unconditionally log every key event to diagnose IME routing.
+                tracing::trace!(
+                    code = ?key.code,
+                    modifiers = ?key.modifiers,
+                    kind = ?key.kind,
+                    is_text_commit = key.is_text_commit,
+                    note_popup_active = self.state.note_popup_active,
+                    "raw key event"
+                );
                 let pressed_key_id = pressed_key_identity(super::LOCAL_INPUT_SOURCE, &key);
                 match key.kind {
                     crossterm::event::KeyEventKind::Press => {
