@@ -301,6 +301,13 @@ impl App {
             self.emit_pane_state_update(update);
         }
         self.sync_agent_metadata_deadline();
+        if crate::app::actions::sync_tab_agent_names(
+            &mut self.state.workspaces,
+            &self.state.terminals,
+            &self.terminal_runtimes,
+        ) {
+            self.state.mark_session_dirty();
+        }
         if let Some((
             overlay,
             was_overlay_active,

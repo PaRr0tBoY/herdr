@@ -811,6 +811,7 @@ pub enum Mode {
     GlobalMenu,
     KeybindHelp,
     Navigator,
+    NewTabType,
 }
 
 impl Mode {
@@ -1404,6 +1405,15 @@ pub(crate) struct PaneFocusTarget {
 
 /// All application state — pure data, no channels or async runtime.
 /// Testable without PTYs or a tokio runtime.
+/// A single item in the new-tab type picker.
+#[derive(Debug, Clone)]
+pub struct NewTabTypeItem {
+    pub label: String,
+    pub detail: String,
+    pub shell_override: Option<String>,
+    pub argv_override: Option<Vec<String>>,
+}
+
 pub struct AppState {
     pub terminals:
         std::collections::HashMap<crate::terminal::TerminalId, crate::terminal::TerminalState>,
@@ -1440,6 +1450,8 @@ pub struct AppState {
     pub request_clipboard_write: Option<Vec<u8>>,
     pub creating_new_tab: bool,
     pub requested_new_tab_name: Option<String>,
+    pub new_tab_type_items: Vec<NewTabTypeItem>,
+    pub selected_new_tab_type: Option<usize>,
     pub pending_workspace_create_cwd: Option<std::path::PathBuf>,
     pub rename_pane_target: Option<PaneId>,
     pub worktree_create: Option<WorktreeCreateState>,
@@ -1810,6 +1822,8 @@ impl AppState {
             request_clipboard_write: None,
             creating_new_tab: false,
             requested_new_tab_name: None,
+            new_tab_type_items: Vec::new(),
+            selected_new_tab_type: None,
             pending_workspace_create_cwd: None,
             rename_pane_target: None,
             worktree_create: None,

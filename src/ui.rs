@@ -1,7 +1,7 @@
 use ratatui::{
     layout::{Constraint, Layout, Rect},
     style::{Modifier, Style},
-    text::Span,
+    text::{Line, Span},
     Frame,
 };
 
@@ -453,8 +453,82 @@ pub fn render_with_runtime_registry(
         Mode::GlobalMenu => render_global_launcher_menu(app, frame),
         Mode::KeybindHelp => render_keybind_help_overlay(app, frame),
         Mode::Navigator => render_navigator_overlay(app, terminal_runtimes, frame),
+        Mode::NewTabType => render_new_tab_type_overlay(app, frame),
         Mode::Terminal => {}
     }
+}
+
+fn render_new_tab_type_overlay(app: &AppState, frame: &mut Frame) {
+    use ratatui::layout::Rect;
+    use ratatui::style::{Style, Stylize};
+    use ratatui::widgets::{Block, Borders, Clear, Paragraph};
+
+    let items = &app.new_tab_type_items;
+    let n = items.len() as u16;
+    if n == 0 {
+        return;
+    }
+    let Some(overlay) = new_tab_type_overlay_rect(app, frame.area()) else {
+        return;
+    };
+
+    frame.render_widget(Clear, overlay);
+    let p = &app.palette;
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" New Tab ")
+        .bg(p.panel_bg)
+        .fg(p.text);
+    let inner = block.inner(overlay);
+    frame.render_widget(block, overlay);
+
+    for (i, item) in items.iter().enumerate() {
+        let row = Rect::new(
+            inner.x + 1,
+            inner.y + i as u16,
+            inner.width.saturating_sub(2),
+            1,
+        );
+        let number = format!(" {}  ", i + 1);
+        let mut spans = vec![Span::styled(number, p.text)];
+        spans.push(Span::styled(item.label.as_str(), p.text));
+        if !item.detail.is_empty() {
+            spans.push(Span::styled(
+                format!("  {}", item.detail),
+                Style::default().fg(p.overlay0),
+            ));
+        }
+        frame.render_widget(Paragraph::new(Line::from(spans)), row);
+    }
+    let hint = Rect::new(inner.x + 1, inner.y + n, inner.width.saturating_sub(2), 1);
+    frame.render_widget(
+        Paragraph::new(" Esc cancel ").style(Style::default().fg(p.overlay0)),
+        hint,
+    );
+}
+
+/// Compute the overlay rect for the new-tab-type picker, anchored to the "+" button.
+pub(super) fn new_tab_type_overlay_rect(app: &crate::app::AppState, area: Rect) -> Option<Rect> {
+    let n = app.new_tab_type_items.len() as u16;
+    if n == 0 {
+        return None;
+    }
+    let width = 42u16;
+    let height = n + 3;
+    let btn = app.view.new_tab_hit_area;
+    let x = if btn.width > 0 {
+        // Align left edge with the "+" button.
+        btn.x.min(area.width.saturating_sub(width))
+    } else {
+        area.width.saturating_sub(width + 2)
+    };
+    let y = if btn.width > 0 { btn.y + btn.height } else { 0 };
+    Some(Rect::new(
+        x,
+        y,
+        width.min(area.width),
+        height.min(area.height),
+    ))
 }
 
 fn render_notifications(app: &AppState, frame: &mut Frame, terminal_area: Rect) {

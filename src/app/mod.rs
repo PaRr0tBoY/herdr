@@ -556,6 +556,8 @@ impl App {
             request_clipboard_write: None,
             creating_new_tab: false,
             requested_new_tab_name: None,
+            new_tab_type_items: Vec::new(),
+            selected_new_tab_type: None,
             pending_workspace_create_cwd: None,
             rename_pane_target: None,
             worktree_create: None,
@@ -976,6 +978,14 @@ impl App {
             if self.state.request_new_tab {
                 self.state.request_new_tab = false;
                 let label = self.state.requested_new_tab_name.take();
+                let (shell_override, command_override) =
+                    if let Some(idx) = self.state.selected_new_tab_type.take() {
+                        let item = &self.state.new_tab_type_items[idx];
+                        (item.shell_override.clone(), item.argv_override.clone())
+                    } else {
+                        (None, None)
+                    };
+                self.state.new_tab_type_items.clear();
                 self.runtime_tab_create(
                     "tui.tab.create",
                     crate::api::schema::TabCreateParams {
@@ -983,6 +993,8 @@ impl App {
                         cwd: None,
                         focus: true,
                         label,
+                        shell_override,
+                        command_override,
                         env: Default::default(),
                     },
                 );
@@ -1800,6 +1812,9 @@ impl App {
             }
             Mode::Navigator => {
                 input::handle_navigator_key(&mut self.state, &self.terminal_runtimes, key_event);
+            }
+            Mode::NewTabType => {
+                self.handle_new_tab_type_key(key);
             }
             Mode::Terminal => {
                 // Should not be called in terminal mode.

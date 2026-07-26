@@ -50,6 +50,8 @@ impl App {
             cwd,
             focus,
             label,
+            shell_override,
+            command_override,
             env,
         } = params;
         let ws_idx = if let Some(workspace_id) = workspace_id {
@@ -73,22 +75,40 @@ impl App {
             Ok(env) => env,
             Err((code, message)) => return encode_error(id, &code, message),
         };
-        let result = self
-            .state
-            .workspaces
-            .get_mut(ws_idx)
-            .ok_or_else(|| std::io::Error::other("workspace disappeared"))
-            .and_then(|ws| {
-                ws.create_tab(
-                    rows,
-                    cols,
-                    cwd,
-                    scrollback_limit_bytes,
-                    host_terminal_theme,
-                    crate::pane::PaneShellConfig::new(&default_shell, self.state.shell_mode),
-                    extra_env,
-                )
-            });
+        let shell = shell_override.as_deref().unwrap_or(&default_shell);
+        let result = if let Some(ref argv) = command_override {
+            self.state
+                .workspaces
+                .get_mut(ws_idx)
+                .ok_or_else(|| std::io::Error::other("workspace disappeared"))
+                .and_then(|ws| {
+                    ws.create_tab_argv_command(
+                        rows,
+                        cols,
+                        cwd,
+                        argv,
+                        extra_env,
+                        scrollback_limit_bytes,
+                        host_terminal_theme,
+                    )
+                })
+        } else {
+            self.state
+                .workspaces
+                .get_mut(ws_idx)
+                .ok_or_else(|| std::io::Error::other("workspace disappeared"))
+                .and_then(|ws| {
+                    ws.create_tab(
+                        rows,
+                        cols,
+                        cwd,
+                        scrollback_limit_bytes,
+                        host_terminal_theme,
+                        crate::pane::PaneShellConfig::new(shell, self.state.shell_mode),
+                        extra_env,
+                    )
+                })
+        };
         match result {
             Ok((tab_idx, terminal, runtime)) => {
                 self.terminal_runtimes.insert(terminal.id.clone(), runtime);
@@ -407,6 +427,8 @@ mod tests {
                 cwd: None,
                 focus: false,
                 label: None,
+                shell_override: None,
+                command_override: None,
                 env: Default::default(),
             },
         );
