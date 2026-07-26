@@ -374,6 +374,9 @@ pub(crate) fn popup_pane_rects(app: &AppState, area: Rect) -> Option<(Rect, Rect
         if let Some(outer) = app.note_popup_outer_rect {
             let pane_inner_width = outer.width.saturating_sub(2);
             let pane_inner_height = outer.height.saturating_sub(2);
+            if pane_inner_width == 0 || pane_inner_height == 0 {
+                return None;
+            }
             let terminal_cols = if pane_inner_width <= 4 {
                 pane_inner_width
             } else {

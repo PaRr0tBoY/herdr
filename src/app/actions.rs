@@ -1756,15 +1756,19 @@ impl AppState {
         start_col: u16,
         start_row: u16,
     ) {
-        // dx: dragging left increases width, dragging right decreases.
-        let dx = start_col.saturating_sub(col);
-        let dy = row.saturating_sub(start_row);
-        let new_w = (start_rect.width + dx).max(NOTE_POPUP_MIN_W);
-        let new_h = (start_rect.height + dy).max(NOTE_POPUP_MIN_H);
-        let new_x = start_rect.x + start_rect.width - new_w;
+        // Use signed arithmetic so dragging right/up can shrink.
+        let dx: i32 = start_col as i32 - col as i32;
+        let dy: i32 = row as i32 - start_row as i32;
+        let new_w = ((start_rect.width as i32 + dx).max(NOTE_POPUP_MIN_W as i32)) as u16;
+        let new_h = ((start_rect.height as i32 + dy).max(NOTE_POPUP_MIN_H as i32)) as u16;
+        // Anchor the top-right corner to the N button position.
+        let anchor_x = self.view.note_hit_area.x + self.view.note_hit_area.width;
+        let new_x = anchor_x.saturating_sub(new_w);
         let new_y = start_rect.y;
         // Keep top-right corner fixed.
         let terminal = self.view.terminal_area;
+        let new_x = new_x.max(terminal.x);
+        let new_y = new_y.max(terminal.y);
         let new_w = new_w.min(terminal.x + terminal.width - new_x);
         let new_h = new_h.min(terminal.y + terminal.height - new_y);
         if new_w < NOTE_POPUP_MIN_W || new_h < NOTE_POPUP_MIN_H {
