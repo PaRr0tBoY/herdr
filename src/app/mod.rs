@@ -1764,23 +1764,6 @@ impl App {
     /// Uses the standalone handler functions that work on `&mut AppState`
     /// since the server doesn't have the async context of the monolithic App.
     fn handle_non_terminal_key_headless(&mut self, key: crate::input::TerminalKey) {
-        // DEBUG: log every key reaching the headless handler.
-        let _ = (|| -> std::io::Result<()> {
-            use std::io::Write;
-            let mut f = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(r"C:\Users\Acid\AppData\Roaming\herdr\key-debug.log")?;
-            writeln!(
-                f,
-                "HEADLESS code={:?} mod={:?} kind={:?} text_commit={} note_active={}",
-                key.code,
-                key.modifiers,
-                key.kind,
-                key.is_text_commit,
-                self.state.note_popup_active,
-            )
-        })();
         if self.state.note_popup_active {
             // Ctrl+S: save note to file.
             if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL)
