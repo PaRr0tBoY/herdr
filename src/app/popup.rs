@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use crate::app::state::AppState;
 use crate::app::{App, Mode};
 use crate::layout::PaneId;
 use crate::pane::PaneLaunchEnv;
@@ -194,7 +193,7 @@ impl App {
 // ---------------------------------------------------------------------------
 
 impl App {
-    /// Toggle the note popup for the active workspace.
+    /// Toggle note editing for the active workspace — opens in an overlay pane.
     pub(crate) fn toggle_note_popup(&mut self) -> std::io::Result<()> {
         if self.state.note_popup_active {
             self.close_note_popup();
@@ -203,6 +202,7 @@ impl App {
         self.open_note_popup()
     }
 
+    /// Open the note file in an editor overlay pane.
     fn open_note_popup(&mut self) -> std::io::Result<()> {
         let ws_idx = self
             .state
@@ -211,72 +211,36 @@ impl App {
         let ws_id = self.state.workspaces[ws_idx].id.clone();
         let note_path = crate::note::note_path(&ws_id);
 
-        // Compute popup geometry.
-        let terminal_area = self.state.view.terminal_area;
-        let (w, h) = self
-            .state
-            .workspaces
-            .get(ws_idx)
-            .and_then(|ws| ws.note_popup_size)
-            .unwrap_or_else(|| AppState::default_note_popup_size(terminal_area));
-        let outer =
-            AppState::compute_note_popup_rect(self.state.view.note_hit_area, terminal_area, w, h)
-                .ok_or_else(|| std::io::Error::other("terminal too small for note popup"))?;
-
-        // Populate the in-memory buffer from file on first open.
-        let ws = &mut self.state.workspaces[ws_idx];
-        if ws.note_buffer.is_empty() && note_path.exists() {
-            ws.note_buffer = std::fs::read_to_string(&note_path).unwrap_or_default();
+        // Ensure the note file exists.
+        if let Some(parent) = note_path.parent() {
+            std::fs::create_dir_all(parent)?;
         }
-        let content = std::mem::take(&mut ws.note_buffer);
-        let mut textarea =
-            ratatui_textarea::TextArea::new(content.lines().map(|l| l.to_string()).collect());
-        textarea.set_style(
-            ratatui::style::Style::default()
-                .fg(self.state.palette.text)
-                .bg(self.state.palette.panel_bg),
-        );
-        // Remove underline from cursor line.
-        textarea.set_cursor_line_style(ratatui::style::Style::default());
-        // Restore cursor position from previous session.
-        if let Some((row, col)) = self.state.note_cursor.take() {
-            use ratatui_textarea::CursorMove;
-            let max_row = textarea.lines().len().saturating_sub(1);
-            let row = row.min(max_row);
-            let col = col.min(textarea.lines().get(row).map(|l| l.chars().count()).unwrap_or(0));
-            textarea.move_cursor(CursorMove::Jump(row as u16, col as u16));
+        if !note_path.exists() {
+            std::fs::write(&note_path, "")?;
         }
-        self.state.note_textarea = Some(textarea);
 
-        // Tag this popup as the note popup.
+        let argv = crate::platform::note_editor_argv(&note_path)?;
+        let geometry = super::popup::PopupGeometry {
+            width: Some(crate::popup_size::PopupSize::Percent(50)),
+            height: Some(crate::popup_size::PopupSize::Percent(40)),
+        };
+        self.spawn_popup_argv_command(
+            &argv,
+            note_path.parent().map(|p| p.to_path_buf()),
+            vec![],
+            geometry,
+        )?;
+
         self.state.note_popup_active = true;
         self.state.note_popup_workspace_id = Some(ws_id);
-        self.state.note_popup_outer_rect = Some(outer);
         Ok(())
     }
 
-    /// Close the note popup and reset note-specific state.
+    /// Close the note editor popup.
     pub(crate) fn close_note_popup(&mut self) {
-        // Save text back to workspace buffer.
-        if let Some(textarea) = self.state.note_textarea.take() {
-            // Remember cursor position for next open.
-            let cursor = textarea.cursor();
-            self.state.note_cursor = Some((cursor.0, cursor.1));
-            let content: String = textarea
-                .lines()
-                .iter()
-                .map(|l| l.as_str())
-                .collect::<Vec<_>>()
-                .join("\n");
-            if let Some(ws_id) = &self.state.note_popup_workspace_id.clone() {
-                if let Some(ws) = self.state.workspaces.iter_mut().find(|w| &w.id == ws_id) {
-                    ws.note_buffer = content;
-                }
-            }
-        }
+        self.close_popup_pane();
         self.state.note_popup_active = false;
         self.state.note_popup_workspace_id = None;
-        self.state.note_popup_outer_rect = None;
     }
 }
 

@@ -369,25 +369,6 @@ pub(super) fn render_panes(
 
 pub(crate) fn popup_pane_rects(app: &AppState, area: Rect) -> Option<(Rect, Rect)> {
     let popup = app.popup_pane.as_ref()?;
-    // Note popup uses a custom position (anchored to N button).
-    if app.note_popup_active {
-        if let Some(outer) = app.note_popup_outer_rect {
-            let pane_inner_width = outer.width.saturating_sub(2);
-            let pane_inner_height = outer.height.saturating_sub(2);
-            let terminal_cols = if pane_inner_width <= 4 {
-                pane_inner_width
-            } else {
-                pane_inner_width.saturating_sub(1)
-            };
-            let inner = Rect::new(
-                outer.x.saturating_add(1),
-                outer.y.saturating_add(1),
-                terminal_cols,
-                pane_inner_height,
-            );
-            return Some((outer, inner));
-        }
-    }
     resolve_popup_geometry(popup.width, popup.height, area)
         .map(|geometry| (geometry.outer, geometry.inner))
 }
@@ -415,51 +396,6 @@ pub(super) fn resize_popup_pane(
             cell_size.height_px,
         );
     }
-}
-
-pub(super) fn render_note_popup(app: &AppState, frame: &mut Frame) {
-    let Some(outer) = app.note_popup_outer_rect else {
-        return;
-    };
-    let Some(textarea) = &app.note_textarea else {
-        return;
-    };
-    let p = &app.palette;
-    let note_path = app
-        .note_popup_workspace_id
-        .as_ref()
-        .map(|id| {
-            let path = crate::note::note_path(id);
-            format!(" {}  Ctrl+S save", path.display())
-        })
-        .unwrap_or_else(|| " note".to_string());
-    let block = ratatui::widgets::Block::default()
-        .title(note_path)
-        .title_alignment(ratatui::layout::Alignment::Left)
-        .borders(ratatui::widgets::Borders::ALL)
-        .border_style(ratatui::style::Style::default().fg(p.surface0))
-        .style(ratatui::style::Style::default().bg(p.panel_bg));
-    let inner = ratatui::layout::Rect::new(
-        outer.x.saturating_add(1),
-        outer.y.saturating_add(1),
-        outer.width.saturating_sub(2).max(1),
-        outer.height.saturating_sub(2).max(1),
-    );
-    // Render the block first (border + title).
-    frame.render_widget(ratatui::widgets::Clear, outer);
-    frame.render_widget(block, outer);
-    // Render the textarea inside.
-    frame.render_widget(textarea.widget(), inner);
-    // Position the terminal cursor on the textarea cursor.
-    let cursor = textarea.cursor();
-    frame.set_cursor_position((
-        inner.x.saturating_add(cursor.0 as u16),
-        inner.y.saturating_add(cursor.1 as u16),
-    ));
-    // Render a small resize handle hint at bottom-left.
-    let hint = ratatui::text::Text::styled(" ⤡ ", ratatui::style::Style::default().fg(p.overlay1));
-    let hint_area = ratatui::layout::Rect::new(outer.x, outer.y + outer.height - 1, 3, 1);
-    frame.render_widget(ratatui::widgets::Paragraph::new(hint), hint_area);
 }
 
 pub(super) fn render_popup_pane(

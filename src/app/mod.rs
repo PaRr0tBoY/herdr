@@ -691,9 +691,6 @@ impl App {
             popup_pane: None,
             note_popup_active: false,
             note_popup_workspace_id: None,
-            note_popup_outer_rect: None,
-            note_textarea: None,
-            note_cursor: None,
             plugin_command_logs: Vec::new(),
             next_plugin_command_log_id: 1,
             plugin_commands_in_flight: 0,
@@ -1765,38 +1762,9 @@ impl App {
     /// since the server doesn't have the async context of the monolithic App.
     fn handle_non_terminal_key_headless(&mut self, key: crate::input::TerminalKey) {
         if self.state.note_popup_active {
-            // Ctrl+S: save note to file.
-            if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL)
-                && key.code == crossterm::event::KeyCode::Char('s')
-            {
-                if let Some(textarea) = &self.state.note_textarea {
-                    let content: String = textarea
-                        .lines()
-                        .iter()
-                        .map(|l| l.as_str())
-                        .collect::<Vec<_>>()
-                        .join("\n");
-                    if let Some(ws_id) = &self.state.note_popup_workspace_id {
-                        let path = crate::note::note_path(ws_id);
-                        if let Some(parent) = path.parent() {
-                            let _ = std::fs::create_dir_all(parent);
-            }
-                        if let Err(err) = std::fs::write(&path, &content) {
-                            tracing::warn!(err = %err, path = %path.display(), "failed to save note");
-            }
-            }
-            }
-            return;
-            }
             if key.code == crossterm::event::KeyCode::Esc {
                 self.close_note_popup();
             return;
-            }
-            // Forward character input to the textarea.
-            if let Some(textarea) = &mut self.state.note_textarea {
-                let key_event = key.as_key_event();
-                let input: ratatui_textarea::Input = key_event.into();
-                textarea.input(input);
             }
             return;
         }
