@@ -114,10 +114,10 @@ impl App {
                     let mut f = std::fs::OpenOptions::new()
                         .create(true)
                         .append(true)
-                        .open("key-debug.log")?;
+                        .open(r"C:\Users\Acid\AppData\Roaming\herdr\key-debug.log")?;
                     writeln!(
                         f,
-                        "code={:?} mod={:?} kind={:?} text_commit={} note_active={}",
+                        "RAW code={:?} mod={:?} kind={:?} text_commit={} note_active={}",
                         key.code,
                         key.modifiers,
                         key.kind,
@@ -175,7 +175,7 @@ impl App {
                             let mut f = std::fs::OpenOptions::new()
                                 .create(true)
                                 .append(true)
-                                .open("key-debug.log")?;
+                                .open(r"C:\Users\Acid\AppData\Roaming\herdr\key-debug.log")?;
                             writeln!(
                                 f,
                                 "RELEASE code={:?} mod={:?} text_commit={} in_pressed={}",

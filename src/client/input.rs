@@ -367,6 +367,24 @@ fn send_windows_raw_events(
 fn windows_client_input_event_from_raw(
     event: crate::raw_input::RawInputEvent,
 ) -> Option<crate::protocol::ClientInputEvent> {
+    // DEBUG: log raw input events in the thin client.
+    if let crate::raw_input::RawInputEvent::Key(ref key) = event {
+        let _ = (|| -> std::io::Result<()> {
+            use std::io::Write;
+            let mut f = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(r"C:\Users\Acid\AppData\Roaming\herdr\key-debug.log")?;
+            writeln!(
+                f,
+                "CLIENT code={:?} mod={:?} kind={:?} text_commit={}",
+                key.code,
+                key.modifiers,
+                key.kind,
+                key.is_text_commit,
+            )
+        })();
+    }
     match event {
         crate::raw_input::RawInputEvent::Key(key) if key.is_text_commit => {
             let crossterm::event::KeyCode::Char(codepoint) = key.code else {

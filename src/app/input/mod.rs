@@ -568,7 +568,7 @@ impl App {
             let mut f = std::fs::OpenOptions::new()
                 .create(true)
                 .append(true)
-                .open("key-debug.log")?;
+                .open(r"C:\Users\Acid\AppData\Roaming\herdr\key-debug.log")?;
             writeln!(
                 f,
                 "NOTE_POPUP code={:?} mod={:?} kind={:?} text_commit={}",
