@@ -562,6 +562,22 @@ impl App {
 
     /// Route keyboard events to the note popup TextArea.
     fn handle_note_popup_key(&mut self, key: TerminalKey) {
+        // DEBUG: confirm note popup receives the key.
+        let _ = (|| -> std::io::Result<()> {
+            use std::io::Write;
+            let mut f = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("key-debug.log")?;
+            writeln!(
+                f,
+                "NOTE_POPUP code={:?} mod={:?} kind={:?} text_commit={}",
+                key.code,
+                key.modifiers,
+                key.kind,
+                key.is_text_commit,
+            )
+        })();
         let Some(textarea) = &mut self.state.note_textarea else {
             return;
         };

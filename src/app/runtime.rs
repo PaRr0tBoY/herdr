@@ -108,15 +108,23 @@ impl App {
         let previous_mode = self.state.mode;
         let changed = match event {
             crate::raw_input::RawInputEvent::Key(key) => {
-                // DEBUG: unconditionally log every key event to diagnose IME routing.
-                tracing::trace!(
-                    code = ?key.code,
-                    modifiers = ?key.modifiers,
-                    kind = ?key.kind,
-                    is_text_commit = key.is_text_commit,
-                    note_popup_active = self.state.note_popup_active,
-                    "raw key event"
-                );
+                // DEBUG: append key event to file for IME diagnosis.
+                let _ = (|| -> std::io::Result<()> {
+                    use std::io::Write;
+                    let mut f = std::fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open("key-debug.log")?;
+                    writeln!(
+                        f,
+                        "code={:?} mod={:?} kind={:?} text_commit={} note_active={}",
+                        key.code,
+                        key.modifiers,
+                        key.kind,
+                        key.is_text_commit,
+                        self.state.note_popup_active,
+                    )
+                })();
                 let pressed_key_id = pressed_key_identity(super::LOCAL_INPUT_SOURCE, &key);
                 match key.kind {
                     crossterm::event::KeyEventKind::Press => {
@@ -161,6 +169,22 @@ impl App {
                         }
                     }
                     crossterm::event::KeyEventKind::Release => {
+                        // DEBUG: Release events might carry IME-committed characters.
+                        let _ = (|| -> std::io::Result<()> {
+                            use std::io::Write;
+                            let mut f = std::fs::OpenOptions::new()
+                                .create(true)
+                                .append(true)
+                                .open("key-debug.log")?;
+                            writeln!(
+                                f,
+                                "RELEASE code={:?} mod={:?} text_commit={} in_pressed={}",
+                                key.code,
+                                key.modifiers,
+                                key.is_text_commit,
+                                self.pressed_terminal_keys.contains_key(&pressed_key_id),
+                            )
+                        })();
                         self.suppressed_repeat_keys.remove(&pressed_key_id);
                         if let Some(pressed) = self.pressed_terminal_keys.remove(&pressed_key_id) {
                             let _ = self
