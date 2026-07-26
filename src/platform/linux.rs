@@ -72,8 +72,22 @@ pub(crate) fn scrollback_editor_argv(path: &std::path::Path) -> std::io::Result<
 
 pub(crate) fn note_editor_argv(path: &std::path::Path) -> std::io::Result<Vec<String>> {
     let quoted_path = shell_quote(&path.display().to_string());
+    // Try VISUAL/EDITOR, fallback to vi with insert mode.
+    let editor_cmd = std::env::var("VISUAL")
+        .or_else(|_| std::env::var("EDITOR"))
+        .unwrap_or_else(|_| "vi".to_string());
+    // Detect vim-like editors and add +startinsert.
+    let editor_name = std::path::Path::new(&editor_cmd)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(&editor_cmd);
+    let insert_flag = if editor_name == "vim" || editor_name == "nvim" || editor_name == "vi" || editor_name == "vim.tiny" {
+        "+startinsert"
+    } else {
+        ""
+    };
     let command = format!(
-        r#"note_file={quoted_path}; eval "${{EDITOR:-vi}} \"\$note_file\"""#
+        r#"note_file={quoted_path}; "{editor_cmd}" {insert_flag} "$note_file""#
     );
     Ok(vec!["/bin/sh".to_string(), "-c".to_string(), command])
 }

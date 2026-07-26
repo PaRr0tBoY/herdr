@@ -238,6 +238,17 @@ fn note_editor_argv_with_env_and_probe(
             )
         })?;
         if !argv.is_empty() {
+            // If using a vim-like editor, start in insert mode for note-taking.
+            let exe_name = argv[0].to_lowercase();
+            let is_vim_like = exe_name.ends_with("vim.exe")
+                || exe_name.ends_with("nvim.exe")
+                || exe_name == "vim"
+                || exe_name == "nvim"
+                || exe_name == "vi";
+            if is_vim_like && argv.len() >= 2 {
+                // Insert +startinsert after the program name.
+                argv.insert(1, "+startinsert".to_string());
+            }
             argv.push(path.display().to_string());
             return Ok(argv);
         }
@@ -256,7 +267,11 @@ fn note_editor_argv_with_env_and_probe(
             .status()
         {
             if output.success() {
-                return Ok(vec![candidate.to_string(), path.display().to_string()]);
+                return Ok(vec![
+                    candidate.to_string(),
+                    "+startinsert".to_string(),
+                    path.display().to_string(),
+                ]);
             }
         }
     }

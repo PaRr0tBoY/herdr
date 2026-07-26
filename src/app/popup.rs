@@ -22,6 +22,11 @@ impl App {
         let Some(popup) = self.state.popup_pane.take() else {
             return false;
         };
+        // If this popup was the note editor, reset note state.
+        if self.state.note_popup_active {
+            self.state.note_popup_active = false;
+            self.state.note_popup_workspace_id = None;
+        }
         self.state
             .direct_attach_resize_locks
             .remove(&popup.terminal_id);
@@ -195,7 +200,8 @@ impl App {
 impl App {
     /// Toggle note editing for the active workspace — opens in an overlay pane.
     pub(crate) fn toggle_note_popup(&mut self) -> std::io::Result<()> {
-        if self.state.note_popup_active {
+        // Close if note popup is active or any popup pane is still open.
+        if self.state.note_popup_active || self.state.popup_pane.is_some() {
             self.close_note_popup();
             return Ok(());
         }
