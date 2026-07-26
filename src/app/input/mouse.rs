@@ -819,6 +819,19 @@ impl AppState {
                         DragTarget::ReleaseNotesScrollbar { .. }
                         | DragTarget::ProductAnnouncementScrollbar { .. }
                         | DragTarget::KeybindHelpScrollbar { .. } => {}
+                        DragTarget::NotePopupResize {
+                            start_rect,
+                            start_col,
+                            start_row,
+                        } => {
+                            self.handle_note_popup_resize_drag(
+                                mouse.column,
+                                mouse.row,
+                                *start_rect,
+                                *start_col,
+                                *start_row,
+                            );
+                        }
                     }
                 }
             }

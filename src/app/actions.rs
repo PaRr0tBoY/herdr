@@ -1650,6 +1650,7 @@ impl AppState {
             if should_reset {
                 self.note_popup_active = false;
                 self.note_popup_workspace_id = None;
+                self.note_popup_outer_rect = None;
             }
         }
         for idx in close_indices.iter().rev() {
@@ -1700,6 +1701,82 @@ impl AppState {
         self.view.tab_scroll_right_hit_area = layout.scroll_right_hit_area;
         self.view.new_tab_hit_area = layout.new_tab_hit_area;
         self.view.note_hit_area = layout.note_hit_area;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Note popup
+// ---------------------------------------------------------------------------
+
+/// Default note popup size fractions and minimum dimensions.
+const NOTE_POPUP_WIDTH_FRAC: f32 = 0.5;
+const NOTE_POPUP_HEIGHT_FRAC: f32 = 0.4;
+const NOTE_POPUP_MIN_W: u16 = 12;
+const NOTE_POPUP_MIN_H: u16 = 3;
+
+impl AppState {
+    /// Compute the note popup outer rect anchored so the top-right corner
+    /// sits at the N button position (or just below the tab bar).
+    pub(crate) fn compute_note_popup_rect(
+        note_hit_area: Rect,
+        terminal_area: Rect,
+        width: u16,
+        height: u16,
+    ) -> Option<Rect> {
+        let w = width.max(NOTE_POPUP_MIN_W).min(terminal_area.width);
+        let h = height.max(NOTE_POPUP_MIN_H).min(terminal_area.height);
+        // Anchor: top-right of popup = bottom-right of N button.
+        let anchor_x = note_hit_area.x + note_hit_area.width;
+        let anchor_y = note_hit_area.y + note_hit_area.height;
+        let x = anchor_x
+            .saturating_sub(w)
+            .min(terminal_area.x + terminal_area.width);
+        let y = anchor_y.min(terminal_area.y + terminal_area.height);
+        let w = w.min(terminal_area.x + terminal_area.width - x);
+        let h = h.min(terminal_area.y + terminal_area.height - y);
+        if w < NOTE_POPUP_MIN_W || h < NOTE_POPUP_MIN_H {
+            return None;
+        }
+        Some(Rect::new(x, y, w, h))
+    }
+
+    /// Compute default note popup size from terminal area.
+    pub(crate) fn default_note_popup_size(terminal_area: Rect) -> (u16, u16) {
+        let w = (terminal_area.width as f32 * NOTE_POPUP_WIDTH_FRAC) as u16;
+        let h = (terminal_area.height as f32 * NOTE_POPUP_HEIGHT_FRAC) as u16;
+        (w.max(NOTE_POPUP_MIN_W), h.max(NOTE_POPUP_MIN_H))
+    }
+
+    /// Handle a drag on the note popup's bottom-left resize corner.
+    pub(crate) fn handle_note_popup_resize_drag(
+        &mut self,
+        col: u16,
+        row: u16,
+        start_rect: Rect,
+        start_col: u16,
+        start_row: u16,
+    ) {
+        // dx: dragging left increases width, dragging right decreases.
+        let dx = start_col.saturating_sub(col);
+        let dy = row.saturating_sub(start_row);
+        let new_w = (start_rect.width + dx).max(NOTE_POPUP_MIN_W);
+        let new_h = (start_rect.height + dy).max(NOTE_POPUP_MIN_H);
+        let new_x = start_rect.x + start_rect.width - new_w;
+        let new_y = start_rect.y;
+        // Keep top-right corner fixed.
+        let terminal = self.view.terminal_area;
+        let new_w = new_w.min(terminal.x + terminal.width - new_x);
+        let new_h = new_h.min(terminal.y + terminal.height - new_y);
+        if new_w < NOTE_POPUP_MIN_W || new_h < NOTE_POPUP_MIN_H {
+            return;
+        }
+        // Persist size to the workspace.
+        if let Some(ws_id) = &self.note_popup_workspace_id {
+            if let Some(ws) = self.workspaces.iter_mut().find(|ws| &ws.id == ws_id) {
+                ws.note_popup_size = Some((new_w, new_h));
+            }
+        }
+        self.note_popup_outer_rect = Some(Rect::new(new_x, new_y, new_w, new_h));
     }
 }
 

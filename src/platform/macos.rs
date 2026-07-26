@@ -44,14 +44,6 @@ pub(crate) fn scrollback_editor_argv(path: &Path) -> std::io::Result<Vec<String>
     Ok(vec!["/bin/sh".to_string(), "-c".to_string(), command])
 }
 
-pub(crate) fn note_editor_argv(path: &Path) -> std::io::Result<Vec<String>> {
-    let quoted_path = shell_quote(&path.display().to_string());
-    let command = format!(
-        r#"note_file={quoted_path}; eval "${{EDITOR:-vi}} \"\$note_file\"""#
-    );
-    Ok(vec!["/bin/sh".to_string(), "-c".to_string(), command])
-}
-
 pub(crate) fn interactive_shell_command(argv: &[String], shell_name: &str) -> Option<String> {
     super::interactive_unix_shell_command(argv, shell_name, shell_quote)
 }

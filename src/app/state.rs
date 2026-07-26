@@ -1176,6 +1176,14 @@ pub(crate) enum DragTarget {
     },
     SidebarDivider,
     SidebarSectionDivider,
+    NotePopupResize {
+        /// Original outer rect of the popup when drag started.
+        start_rect: Rect,
+        /// Mouse column when drag started.
+        start_col: u16,
+        /// Mouse row when drag started.
+        start_row: u16,
+    },
 }
 
 /// Active mouse drag on a split border or sidebar divider.
@@ -1592,6 +1600,13 @@ pub struct AppState {
     pub(crate) note_popup_active: bool,
     /// Workspace id whose note is currently open in the popup.
     pub(crate) note_popup_workspace_id: Option<String>,
+    /// Remembered note popup size per workspace: (width_cells, height_cells).
+    /// Computed outer rect of the note popup (updated on open and resize).
+    pub(crate) note_popup_outer_rect: Option<Rect>,
+    /// TextArea widget for the note popup. Lives here so it survives popup toggle.
+    pub(crate) note_textarea: Option<ratatui_textarea::TextArea<'static>>,
+    /// Saved cursor position to restore when reopening the note popup.
+    pub(crate) note_cursor: Option<(usize, usize)>,
     /// Recent plugin action/event command executions.
     pub(crate) plugin_command_logs: Vec<crate::api::schema::PluginCommandLogInfo>,
     pub(crate) next_plugin_command_log_id: u64,
@@ -1962,6 +1977,9 @@ impl AppState {
             popup_pane: None,
             note_popup_active: false,
             note_popup_workspace_id: None,
+            note_popup_outer_rect: None,
+            note_textarea: None,
+            note_cursor: None,
             plugin_command_logs: Vec::new(),
             next_plugin_command_log_id: 1,
             plugin_commands_in_flight: 0,
