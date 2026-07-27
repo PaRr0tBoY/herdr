@@ -4770,7 +4770,7 @@ mod tests {
                 _ => None,
             })
             .expect("tab created event");
-        assert_eq!(tab_created.label, "ops");
+        assert_eq!(tab_created.label, "2 ops");
         shutdown_test_runtimes(&mut server);
     }
 

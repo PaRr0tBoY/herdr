@@ -129,6 +129,11 @@ impl App {
     }
 
     pub(super) async fn handle_paste(&mut self, text: String) {
+        tracing::debug!(
+            note_popup_active = self.state.note_popup_active,
+            len = text.len(),
+            "handle_paste"
+        );
         if self.state.note_popup_active {
             if let Some(textarea) = &mut self.state.note_textarea {
                 textarea.insert_str(text);
@@ -494,7 +499,7 @@ impl App {
     }
 
     /// Handle mouse events for the note popup overlay.
-    fn handle_note_popup_mouse(&mut self, mouse: MouseEvent) {
+    pub(crate) fn handle_note_popup_mouse(&mut self, mouse: MouseEvent) {
         use crossterm::event::{MouseButton, MouseEventKind};
         use ratatui::layout::Rect;
 
@@ -502,12 +507,18 @@ impl App {
             return;
         };
 
-        // Resize corner: bottom-left 3x1 area.
         let corner = Rect::new(
             outer.x,
             outer.y + outer.height.saturating_sub(1),
-            3.min(outer.width),
+            2.min(outer.width),
             1.min(outer.height),
+        );
+        // Text area: inner rect minus 1px border on all sides.
+        let text_area = Rect::new(
+            outer.x.saturating_add(1),
+            outer.y.saturating_add(1),
+            outer.width.saturating_sub(2).max(1),
+            outer.height.saturating_sub(2).max(1),
         );
 
         match mouse.kind {
@@ -532,32 +543,166 @@ impl App {
                     || mouse.row >= outer.y + outer.height
                 {
                     self.close_note_popup();
+                    return;
+                }
+                // Click inside text area: position cursor, cancel selection.
+                if let Some(textarea) = &mut self.state.note_textarea {
+                    if mouse.column >= text_area.x
+                        && mouse.column < text_area.x + text_area.width
+                        && mouse.row >= text_area.y
+                        && mouse.row < text_area.y + text_area.height
+                    {
+                        // Cancel any previous selection and place cursor at click point.
+                        textarea.cancel_selection();
+                        let target_sr = mouse.row.saturating_sub(text_area.y);
+                        let target_sc = mouse.column.saturating_sub(text_area.x);
+                Self::move_textarea_cursor_to_screen(textarea, target_sr, target_sc);
+                        self.state.drag = Some(crate::app::state::DragState {
+                            target: crate::app::state::DragTarget::NoteTextSelect,
+                        });
+                    }
                 }
             }
             MouseEventKind::Drag(MouseButton::Left) => {
-                if let Some(crate::app::state::DragState {
-                    target:
-                        crate::app::state::DragTarget::NotePopupResize {
-                            start_rect,
-                            start_col,
-                            start_row,
-                        },
-                }) = &self.state.drag
-                {
-                    self.state.handle_note_popup_resize_drag(
-                        mouse.column,
-                        mouse.row,
-                        *start_rect,
-                        *start_col,
-                        *start_row,
-                    );
+                match &self.state.drag {
+                    Some(crate::app::state::DragState {
+                        target:
+                            crate::app::state::DragTarget::NotePopupResize {
+                                start_rect,
+                                start_col,
+                                start_row,
+                            },
+                    }) => {
+                        self.state.handle_note_popup_resize_drag(
+                            mouse.column,
+                            mouse.row,
+                            *start_rect,
+                            *start_col,
+                            *start_row,
+                        );
+                    }
+                    Some(crate::app::state::DragState {
+                        target:
+                            crate::app::state::DragTarget::NoteTextSelect,
+                    }) => {
+                        if let Some(textarea) = &mut self.state.note_textarea {
+                            if !textarea.is_selecting() {
+                                textarea.start_selection();
+                            }
+                            let target_sr = mouse.row.saturating_sub(text_area.y);
+                            let target_sc = mouse.column.saturating_sub(text_area.x);
+                            // move_cursor preserves selection when active
+                            // (internally passes shift=true when selection_start.is_some()).
+                            Self::move_textarea_cursor_to_screen(textarea, target_sr, target_sc);
+                        }
+                    }
+                    _ => {}
                 }
             }
             MouseEventKind::Up(MouseButton::Left) => {
+                // If text was selected, copy to clipboard.
+                if matches!(
+                    self.state.drag.as_ref().map(|d| &d.target),
+                    Some(crate::app::state::DragTarget::NoteTextSelect),
+                ) {
+                    if let Some(textarea) = &mut self.state.note_textarea {
+                        if textarea.is_selecting() {
+                            textarea.copy();
+                            let yanked = textarea.yank_text();
+                            textarea.cancel_selection();
+                            if !yanked.is_empty() {
+                                self.state.request_clipboard_write =
+                                    Some(yanked.into_bytes());
+                                self.state.copy_feedback =
+                                    Some(crate::app::state::CopyFeedback {
+                                        message: "copied to clipboard".to_string(),
+                                    });
+                                self.copy_feedback_deadline =
+                                    Some(std::time::Instant::now() + super::COPY_FEEDBACK_DURATION);
+                                self.dispatch_pending_clipboard_write();
+                            }
+                        }
+                    }
+                }
                 self.state.drag = None;
             }
             _ => {}
         }
+    }
+
+    /// Move textarea cursor to a screen-relative position (row, col)
+    /// within the text area viewport. Translates screen coordinates to
+    /// data coordinates via scroll offset from the current cursor,
+    /// then uses `CursorMove::Jump` for instant, precise placement.
+    /// When textarea selection is active, `move_cursor` internally passes
+    /// `shift=true`, so selection extends from origin to target.
+    fn move_textarea_cursor_to_screen(
+        textarea: &mut ratatui_textarea::TextArea,
+        screen_row: u16,
+        screen_col: u16,
+    ) {
+        use ratatui_textarea::CursorMove;
+        use unicode_width::UnicodeWidthChar;
+
+        // Phase 1: Row movement via step-based Down/Up.
+        // These correctly handle WrapMode::Word wrapping.
+        let scr = textarea.screen_cursor();
+        let d_row = screen_row as i32 - scr.row as i32;
+        let row_mover = if d_row > 0 {
+            CursorMove::Down
+        } else {
+            CursorMove::Up
+        };
+        for _ in 0..(d_row.unsigned_abs() as usize).min(500) {
+            textarea.move_cursor(row_mover);
+    }
+
+        // Phase 2: Column via display-width-aware mapping.
+        // Forward/Back move by grapheme clusters, not screen columns,
+        // so they misalign with CJK/wide characters. Instead we compute
+        // the target data column using the current cursor as an anchor:
+        // cursor() and screen_cursor() form a stable (data, screen) pair
+        // from the last render, breaking the scroll-offset feedback loop.
+        let scr = textarea.screen_cursor();
+        let data = textarea.cursor();
+        let line = &textarea.lines()[data.0];
+
+        // Display width from line start to current cursor position.
+        let cursor_disp_col: usize = line
+            .chars()
+            .take(data.1)
+            .map(|c| c.width().unwrap_or(0))
+            .sum();
+
+        // Target display width from line start.
+        // Works with WrapMode::Word because cursor_disp_col - scr.col
+        // gives the display offset of the current wrapped segment start.
+        let d_col = screen_col as i32 - scr.col as i32;
+        let target_disp_col = (cursor_disp_col as i32 + d_col).max(0) as usize;
+
+        // Walk characters from line start to find the data column
+        // whose cumulative display width reaches target_disp_col.
+        let mut acc = 0usize;
+        let mut target_col = line.chars().count(); // default: end of line
+        for (i, c) in line.chars().enumerate() {
+            let w = c.width().unwrap_or(0);
+            if acc + w > target_disp_col {
+                // Click landed inside a wide character (e.g. CJK) —
+                // snap to nearest character boundary.
+                target_col = if target_disp_col - acc >= w.div_ceil(2) {
+                    i + 1
+                } else {
+                    i
+                };
+                break;
+    }
+            acc += w;
+            target_col = i + 1;
+    }
+
+
+
+        textarea.move_cursor(CursorMove::Jump(data.0 as u16, target_col as u16));
     }
 
     /// Route keyboard events to the note popup TextArea.
@@ -572,40 +717,52 @@ impl App {
             .contains(crossterm::event::KeyModifiers::CONTROL)
             && key.code == crossterm::event::KeyCode::Char('s')
         {
-            self.save_note_to_file();
+            self.state.save_note_to_file();
+            return;
+        }
+        // Ctrl+V: paste from clipboard.
+        if key
+            .modifiers
+            .contains(crossterm::event::KeyModifiers::CONTROL)
+            && key.code == crossterm::event::KeyCode::Char('v')
+        {
+            if let Some(text) = crate::platform::read_clipboard_text() {
+                textarea.insert_str(&text);
+                self.state.save_note_to_file();
+            }
+            return;
+        }
+        // Ctrl+Z: undo.
+        if key
+            .modifiers
+            .contains(crossterm::event::KeyModifiers::CONTROL)
+            && key.code == crossterm::event::KeyCode::Char('z')
+        {
+            textarea.undo();
+            return;
+        }
+        // Ctrl+Y: redo.
+        if key
+            .modifiers
+            .contains(crossterm::event::KeyModifiers::CONTROL)
+            && key.code == crossterm::event::KeyCode::Char('y')
+        {
+            textarea.redo();
             return;
         }
         if key.code == crossterm::event::KeyCode::Esc {
-            self.close_note_popup();
+            // Esc is a no-op in the note popup.
+            // Closing via Esc conflicts with bracketed paste sequences
+            // (\x1b[200~…) which arrive on Windows as individual key events
+            // with Esc as the first character.
+            // Close the popup by clicking outside or toggling the note button.
             return;
         }
         let input: ratatui_textarea::Input = key_event.into();
         tracing::debug!(?key.code, ?key.modifiers, "note popup key");
         textarea.input(input);
-    }
-
-    /// Save note content to the workspace's .md file.
-    fn save_note_to_file(&mut self) {
-        let Some(textarea) = &self.state.note_textarea else {
-            return;
-        };
-        let content: String = textarea
-            .lines()
-            .iter()
-            .map(|l| l.as_str())
-            .collect::<Vec<_>>()
-            .join("\n");
-        let Some(ws_id) = &self.state.note_popup_workspace_id else {
-            return;
-        };
-        let path = crate::note::note_path(ws_id);
-        // Ensure parent dir exists.
-        if let Some(parent) = path.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        if let Err(err) = std::fs::write(&path, &content) {
-            tracing::warn!(err = %err, path = %path.display(), "failed to save note");
-        }
+        // Autosave on every edit so notes survive crashes / taskkill / shutdown.
+        self.state.save_note_to_file();
     }
 
     fn focus_pane_before_mouse_press(&mut self, mouse: MouseEvent) {

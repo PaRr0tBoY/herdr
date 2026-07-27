@@ -1771,7 +1771,7 @@ mod tests {
         let labels: Vec<_> = (0..ws.tabs.len())
             .map(|tab_idx| ws.tab_display_name(tab_idx).unwrap())
             .collect();
-        assert_eq!(labels, vec!["foo", "2", "3"]);
+        assert_eq!(labels, vec!["1 foo", "2", "3"]);
         assert_eq!(ws.tabs[0].custom_name.as_deref(), Some("foo"));
         assert!(ws.tabs[1].custom_name.is_none());
         assert!(ws.tabs[2].custom_name.is_none());

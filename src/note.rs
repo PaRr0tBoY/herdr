@@ -13,18 +13,6 @@ pub(crate) fn note_path(workspace_id: &str) -> PathBuf {
     note_dir().join(format!("{workspace_id}.md"))
 }
 
-/// Creates the note file and its parent directory if they don't exist.
-/// Returns the path to the note file.
-pub(crate) fn ensure_note_file(workspace_id: &str) -> std::io::Result<PathBuf> {
-    let dir = note_dir();
-    std::fs::create_dir_all(&dir)?;
-    let path = note_path(workspace_id);
-    if !path.exists() {
-        std::fs::write(&path, "")?;
-    }
-    Ok(path)
-}
-
 /// Deletes the note file for a workspace, if it exists. Ignores errors.
 pub(crate) fn delete_note_file(workspace_id: &str) {
     let path = note_path(workspace_id);

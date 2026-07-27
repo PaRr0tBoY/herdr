@@ -433,7 +433,7 @@ pub(super) fn render_note_popup(app: &AppState, frame: &mut Frame) {
         .as_ref()
         .map(|id| {
             let path = crate::note::note_path(id);
-            format!(" {}  Ctrl+S save  ·  paste with Ctrl+V", path.display())
+            format!(" {}  paste with Ctrl+V", path.display())
         })
         .unwrap_or_else(|| " note".to_string());
     let block = ratatui::widgets::Block::default()
@@ -452,17 +452,26 @@ pub(super) fn render_note_popup(app: &AppState, frame: &mut Frame) {
     frame.render_widget(ratatui::widgets::Clear, outer);
     frame.render_widget(block, outer);
     // Render the textarea inside.
-    frame.render_widget(textarea.widget(), inner);
+    frame.render_widget(textarea, inner);
+    // Capture scroll offset after the textarea has computed its viewport.
+    // Used by mouse handlers for precise screen→data coordinate mapping.
+    let data = textarea.cursor();
+    let scr = textarea.screen_cursor();
+    app.note_scroll_dr.set(data.0 as i32 - scr.row as i32);
+    app.note_scroll_dc.set(data.1 as i32 - scr.col as i32);
     // Position the terminal cursor on the textarea cursor.
     let cursor = textarea.cursor();
     frame.set_cursor_position((
         inner.x.saturating_add(cursor.0 as u16),
         inner.y.saturating_add(cursor.1 as u16),
     ));
-    // Render a small resize handle hint at bottom-left.
-    let hint = ratatui::text::Text::styled(" ⤡ ", ratatui::style::Style::default().fg(p.overlay1));
-    let hint_area = ratatui::layout::Rect::new(outer.x, outer.y + outer.height - 1, 3, 1);
-    frame.render_widget(ratatui::widgets::Paragraph::new(hint), hint_area);
+    // Resize handle: two round dots at the bottom-left border intersection.
+    let hint_fg = ratatui::style::Style::default().fg(p.overlay1);
+    let corner = outer.y.saturating_add(outer.height).saturating_sub(1);
+    frame.render_widget(
+        ratatui::widgets::Paragraph::new(ratatui::text::Text::styled("••", hint_fg)),
+        ratatui::layout::Rect::new(outer.x, corner, 2, 1),
+    );
 }
 
 pub(super) fn render_popup_pane(

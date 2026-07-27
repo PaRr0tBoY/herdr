@@ -1782,6 +1782,29 @@ impl AppState {
         }
         self.note_popup_outer_rect = Some(Rect::new(new_x, new_y, new_w, new_h));
     }
+
+    /// Save the current note textarea content to the workspace note file.
+    pub(crate) fn save_note_to_file(&self) {
+        let Some(textarea) = &self.note_textarea else {
+            return;
+        };
+        let content: String = textarea
+            .lines()
+            .iter()
+            .map(|l| l.as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+        let Some(ws_id) = &self.note_popup_workspace_id else {
+            return;
+        };
+        let path = crate::note::note_path(ws_id);
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Err(err) = std::fs::write(&path, &content) {
+            tracing::warn!(err = %err, path = %path.display(), "failed to save note");
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -5446,7 +5469,7 @@ mod tests {
         let toast = state.toast.as_ref().unwrap();
         assert_eq!(toast.kind, ToastKind::NeedsAttention);
         assert_eq!(toast.title, "pi needs attention");
-        assert_eq!(toast.context, "background · 2 · logs");
+        assert_eq!(toast.context, "background · 2 · 2 logs");
     }
 
     #[test]
@@ -5472,7 +5495,7 @@ mod tests {
         let toast = state.toast.as_ref().unwrap();
         assert_eq!(toast.kind, ToastKind::NeedsAttention);
         assert_eq!(toast.title, "pi needs attention");
-        assert_eq!(toast.context, "active · 1 · logs");
+        assert_eq!(toast.context, "active · 1 · 2 logs");
     }
 
     #[test]

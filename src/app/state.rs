@@ -1184,6 +1184,8 @@ pub(crate) enum DragTarget {
         /// Mouse row when drag started.
         start_row: u16,
     },
+    /// Mouse drag for text selection inside the note popup text area.
+    NoteTextSelect,
 }
 
 /// Active mouse drag on a split border or sidebar divider.
@@ -1418,7 +1420,6 @@ pub(crate) struct PaneFocusTarget {
 #[derive(Debug, Clone)]
 pub struct NewTabTypeItem {
     pub label: String,
-    pub detail: String,
     pub shell_override: Option<String>,
     pub argv_override: Option<Vec<String>>,
 }
@@ -1607,6 +1608,11 @@ pub struct AppState {
     pub(crate) note_textarea: Option<ratatui_textarea::TextArea<'static>>,
     /// Saved cursor position to restore when reopening the note popup.
     pub(crate) note_cursor: Option<(usize, usize)>,
+    /// Scroll offset captured during last render. Cell so it can be set
+    /// from &AppState (render path doesn't have &mut access).
+    /// (data_row, data_col) = (scroll_dr + screen_row, scroll_dc + screen_col)
+    pub(crate) note_scroll_dr: std::cell::Cell<i32>,
+    pub(crate) note_scroll_dc: std::cell::Cell<i32>,
     /// Recent plugin action/event command executions.
     pub(crate) plugin_command_logs: Vec<crate::api::schema::PluginCommandLogInfo>,
     pub(crate) next_plugin_command_log_id: u64,
@@ -1980,6 +1986,8 @@ impl AppState {
             note_popup_outer_rect: None,
             note_textarea: None,
             note_cursor: None,
+            note_scroll_dr: std::cell::Cell::new(0),
+            note_scroll_dc: std::cell::Cell::new(0),
             plugin_command_logs: Vec::new(),
             next_plugin_command_log_id: 1,
             plugin_commands_in_flight: 0,

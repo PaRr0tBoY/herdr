@@ -816,9 +816,10 @@ impl AppState {
                         DragTarget::SidebarSectionDivider => {
                             self.set_sidebar_section_split(mouse.row);
                         }
-                        DragTarget::ReleaseNotesScrollbar { .. }
+                       | DragTarget::ReleaseNotesScrollbar { .. }
                         | DragTarget::ProductAnnouncementScrollbar { .. }
-                        | DragTarget::KeybindHelpScrollbar { .. } => {}
+                        | DragTarget::KeybindHelpScrollbar { .. }
+                        | DragTarget::NoteTextSelect => {}
                         DragTarget::NotePopupResize {
                             start_rect,
                             start_col,

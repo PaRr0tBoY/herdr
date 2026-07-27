@@ -460,7 +460,6 @@ fn discover_new_tab_types() -> Vec<crate::app::state::NewTabTypeItem> {
         {
             items.push(NewTabTypeItem {
                 label: "PowerShell 7".into(),
-                detail: "pwsh.exe".into(),
                 shell_override: Some("pwsh.exe".into()),
                 argv_override: None,
             });
@@ -471,14 +470,12 @@ fn discover_new_tab_types() -> Vec<crate::app::state::NewTabTypeItem> {
         {
             items.push(NewTabTypeItem {
                 label: "Windows PowerShell".into(),
-                detail: "powershell.exe".into(),
                 shell_override: Some("powershell.exe".into()),
                 argv_override: None,
             });
         }
         items.push(NewTabTypeItem {
             label: "Command Prompt".into(),
-            detail: "cmd.exe".into(),
             shell_override: Some("cmd.exe".into()),
             argv_override: None,
         });
@@ -488,7 +485,6 @@ fn discover_new_tab_types() -> Vec<crate::app::state::NewTabTypeItem> {
         {
             items.push(NewTabTypeItem {
                 label: "WSL".into(),
-                detail: "wsl.exe".into(),
                 shell_override: Some("wsl.exe".into()),
                 argv_override: None,
             });
@@ -500,7 +496,6 @@ fn discover_new_tab_types() -> Vec<crate::app::state::NewTabTypeItem> {
             if !shell.is_empty() {
                 items.push(NewTabTypeItem {
                     label: format!("Shell ({})", shell),
-                    detail: shell.clone(),
                     shell_override: Some(shell),
                     argv_override: None,
                 });
@@ -510,7 +505,6 @@ fn discover_new_tab_types() -> Vec<crate::app::state::NewTabTypeItem> {
             if std::path::Path::new(c).exists() {
                 items.push(NewTabTypeItem {
                     label: c.trim_start_matches("/bin/").to_string(),
-                    detail: c.to_string(),
                     shell_override: Some(c.to_string()),
                     argv_override: None,
                 });
@@ -535,7 +529,6 @@ fn discover_new_tab_types() -> Vec<crate::app::state::NewTabTypeItem> {
         if found {
             items.push(NewTabTypeItem {
                 label: label.to_string(),
-                detail: bin.to_string(),
                 shell_override: None,
                 argv_override: Some(vec![bin.to_string()]),
             });

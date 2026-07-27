@@ -141,7 +141,7 @@ pub(crate) fn compute_tab_bar_view(
     let all_tabs_area = Rect::new(
         area.x,
         area.y,
-        area.width.saturating_sub(NEW_TAB_WIDTH),
+        area.width.saturating_sub(NEW_TAB_WIDTH).saturating_sub(NOTE_BUTTON_WIDTH),
         area.height,
     );
     let all_tabs = layout_tab_hit_areas(ws, all_tabs_area, 0);
@@ -467,11 +467,11 @@ mod tests {
 
         let row = buffer_row_text(terminal.backend().buffer(), app.view.tab_bar_rect, 0);
         assert!(row.contains(" 1 Z"), "tab row: {row:?}");
-        assert!(row.contains(" test Z"), "tab row: {row:?}");
+        assert!(row.contains("2 test Z"), "tab row: {row:?}");
         assert_eq!(app.workspaces[0].tab_display_name(0).as_deref(), Some("1"));
         assert_eq!(
             app.workspaces[0].tab_display_name(custom_tab).as_deref(),
-            Some("test")
+            Some("2 test")
         );
     }
 
@@ -506,7 +506,7 @@ mod tests {
         ws.tabs[0].set_custom_name("abcdefgh".into());
         ws.tabs[0].zoomed = true;
 
-        assert_eq!(tab_width(&ws, 0), 14);
+        assert_eq!(tab_width(&ws, 0), 16);
     }
 
     #[test]
@@ -514,9 +514,10 @@ mod tests {
         let mut ws = Workspace::test_new("test");
         ws.tabs[0].set_custom_name("提交 herdr 的反馈".into());
 
+        // Tab display name includes number prefix: "1 <name>".
         assert_eq!(
             tab_width(&ws, 0),
-            display_width_u16("提交 herdr 的反馈") + 4
+            display_width_u16("1 提交 herdr 的反馈") + 4
         );
     }
 
