@@ -75,6 +75,7 @@ mod layout;
 mod logging;
 mod metadata_tokens;
 mod noninteractive_process;
+mod note;
 mod pane;
 mod persist;
 mod platform;
@@ -452,6 +453,26 @@ fn exit_if_nested_disabled(config: &config::Config) {
 }
 
 fn main() -> io::Result<()> {
+    // Panic hook: write panic info to temp file for post-mortem debugging.
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let msg = if let Some(s) = info.payload().downcast_ref::<&str>() {
+            s.to_string()
+        } else if let Some(s) = info.payload().downcast_ref::<String>() {
+            s.clone()
+        } else {
+            "unknown panic".to_string()
+        };
+        let location = info
+            .location()
+            .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+            .unwrap_or_else(|| "unknown location".to_string());
+        let _ = std::fs::write(
+            std::env::temp_dir().join("herdr-panic.txt"),
+            format!("PANIC: {msg}\nLocation: {location}\n"),
+        );
+        default_hook(info);
+    }));
     let raw_args: Vec<String> = std::env::args().collect();
     let args = match session::configure_from_args(&raw_args) {
         Ok(args) => args,

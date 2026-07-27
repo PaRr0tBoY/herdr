@@ -37,6 +37,7 @@ enum SplitCommand<'a> {
 
 pub struct Tab {
     pub custom_name: Option<String>,
+    pub synced_agent_name: Option<String>,
     pub number: usize,
     /// Identity source for this tab's pane tree.
     pub root_pane: PaneId,
@@ -170,6 +171,7 @@ impl Tab {
         Ok((
             Self {
                 custom_name: None,
+                synced_agent_name: None,
                 number,
                 root_pane: root_id,
                 layout,
@@ -192,6 +194,14 @@ impl Tab {
 
     pub fn set_custom_name(&mut self, name: String) {
         self.custom_name = Some(name);
+        self.synced_agent_name = None;
+    }
+
+    /// Set tab name from agent OSC title. No-op when custom_name is set.
+    pub fn set_synced_agent_name(&mut self, name: String) {
+        if self.custom_name.is_none() {
+            self.synced_agent_name = Some(name);
+        }
     }
 
     pub fn split_focused(
@@ -446,6 +456,7 @@ impl Tab {
         panes.insert(pane_id, moved.pane_state);
         Self {
             custom_name,
+            synced_agent_name: None,
             number,
             root_pane: pane_id,
             layout: TileLayout::from_saved(Node::Pane(pane_id), pane_id),

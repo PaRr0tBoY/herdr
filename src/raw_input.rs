@@ -764,7 +764,7 @@ fn extract_one_event(buffer: &[u8]) -> Option<(RawInputEvent, usize)> {
     let key = parse_terminal_key_sequence(text)?.as_text_commit();
 
     #[cfg(windows)]
-    let key = augment_enter_shift(key);
+    let key = key.augment_enter_shift();
 
     Some((RawInputEvent::Key(key), consumed))
 }
@@ -775,29 +775,6 @@ enum ControlStringFamily {
     StTerminated,
     HostColorSchemeCsi,
     OrphanedSgrMouseTail,
-}
-/// On Windows with VT input mode, the console strips SHIFT from Enter
-/// (both become \r). Check the physical key state so that Shift+Enter
-/// reaches child applications with the SHIFT modifier intact.
-#[cfg(windows)]
-fn augment_enter_shift(mut key: TerminalKey) -> TerminalKey {
-    use crossterm::event::KeyCode;
-    if key.code == KeyCode::Enter && key.modifiers.is_empty() {
-        extern "system" {
-            fn GetAsyncKeyState(vKey: i32) -> i16;
-        }
-        const VK_SHIFT: i32 = 0x10;
-        let shift_held = unsafe { GetAsyncKeyState(VK_SHIFT) } as u16 & 0x8000 != 0;
-        if shift_held {
-            key.modifiers = crossterm::event::KeyModifiers::SHIFT;
-        }
-    }
-    key
-}
-
-#[cfg(not(windows))]
-fn augment_enter_shift(key: TerminalKey) -> TerminalKey {
-    key
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
