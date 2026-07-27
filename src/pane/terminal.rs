@@ -1286,6 +1286,8 @@ impl GhosttyPaneTerminal {
         let Ok(mut core) = self.core.lock() else {
             return;
         };
+        #[cfg(windows)]
+        core.kitty_keyboard.observe(ansi.as_bytes());
         core.terminal.write(ansi.as_bytes());
         #[cfg(windows)]
         windows_recent_fallback::update(&mut core);
@@ -1565,6 +1567,9 @@ impl GhosttyPaneTerminal {
             mouse_protocol_mode,
             mouse_protocol_encoding,
             mouse_alternate_scroll,
+            #[cfg(windows)]
+            modify_other_keys: core.kitty_keyboard.modify_other_keys_enabled(),
+            #[cfg(not(windows))]
             modify_other_keys: core
                 .terminal
                 .keyboard_state_ansi()
