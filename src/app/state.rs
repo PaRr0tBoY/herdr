@@ -787,6 +787,7 @@ pub struct ViewState {
     pub toast_hit_area: Rect,
     pub pane_infos: Vec<PaneInfo>,
     pub split_borders: Vec<SplitBorder>,
+    pub note_hit_area: Rect,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -811,6 +812,7 @@ pub enum Mode {
     GlobalMenu,
     KeybindHelp,
     Navigator,
+    NewTabType,
 }
 
 impl Mode {
@@ -1174,6 +1176,16 @@ pub(crate) enum DragTarget {
     },
     SidebarDivider,
     SidebarSectionDivider,
+    NotePopupResize {
+        /// Original outer rect of the popup when drag started.
+        start_rect: Rect,
+        /// Mouse column when drag started.
+        start_col: u16,
+        /// Mouse row when drag started.
+        start_row: u16,
+    },
+    /// Mouse drag for text selection inside the note popup text area.
+    NoteTextSelect,
 }
 
 /// Active mouse drag on a split border or sidebar divider.
@@ -1404,6 +1416,15 @@ pub(crate) struct PaneFocusTarget {
 
 /// All application state — pure data, no channels or async runtime.
 /// Testable without PTYs or a tokio runtime.
+/// A single item in the new-tab type picker.
+#[derive(Debug, Clone)]
+pub struct NewTabTypeItem {
+    pub label: String,
+    pub detail: String,
+    pub shell_override: Option<String>,
+    pub argv_override: Option<Vec<String>>,
+}
+
 pub struct AppState {
     pub terminals:
         std::collections::HashMap<crate::terminal::TerminalId, crate::terminal::TerminalState>,
@@ -1440,6 +1461,8 @@ pub struct AppState {
     pub request_clipboard_write: Option<Vec<u8>>,
     pub creating_new_tab: bool,
     pub requested_new_tab_name: Option<String>,
+    pub new_tab_type_items: Vec<NewTabTypeItem>,
+    pub selected_new_tab_type: Option<usize>,
     pub pending_workspace_create_cwd: Option<std::path::PathBuf>,
     pub rename_pane_target: Option<PaneId>,
     pub worktree_create: Option<WorktreeCreateState>,
@@ -1575,6 +1598,22 @@ pub struct AppState {
     pub(crate) pane_graphics_revision: u64,
     /// Session-modal terminal popup. This is intentionally outside workspace layouts.
     pub(crate) popup_pane: Option<PopupPaneState>,
+    /// True when the current popup is a note editor (vs. plugin popup).
+    pub(crate) note_popup_active: bool,
+    /// Workspace id whose note is currently open in the popup.
+    pub(crate) note_popup_workspace_id: Option<String>,
+    /// Remembered note popup size per workspace: (width_cells, height_cells).
+    /// Computed outer rect of the note popup (updated on open and resize).
+    pub(crate) note_popup_outer_rect: Option<Rect>,
+    /// TextArea widget for the note popup. Lives here so it survives popup toggle.
+    pub(crate) note_textarea: Option<ratatui_textarea::TextArea<'static>>,
+    /// Saved cursor position to restore when reopening the note popup.
+    pub(crate) note_cursor: Option<(usize, usize)>,
+    /// Scroll offset captured during last render. Cell so it can be set
+    /// from &AppState (render path doesn't have &mut access).
+    /// (data_row, data_col) = (scroll_dr + screen_row, scroll_dc + screen_col)
+    pub(crate) note_scroll_dr: std::cell::Cell<i32>,
+    pub(crate) note_scroll_dc: std::cell::Cell<i32>,
     /// Recent plugin action/event command executions.
     pub(crate) plugin_command_logs: Vec<crate::api::schema::PluginCommandLogInfo>,
     pub(crate) next_plugin_command_log_id: u64,
@@ -1810,6 +1849,8 @@ impl AppState {
             request_clipboard_write: None,
             creating_new_tab: false,
             requested_new_tab_name: None,
+            new_tab_type_items: Vec::new(),
+            selected_new_tab_type: None,
             pending_workspace_create_cwd: None,
             rename_pane_target: None,
             worktree_create: None,
@@ -1845,6 +1886,7 @@ impl AppState {
                 toast_hit_area: Rect::default(),
                 pane_infos: Vec::new(),
                 split_borders: Vec::new(),
+                note_hit_area: Rect::default(),
             },
             drag: None,
             workspace_press: None,
@@ -1940,6 +1982,13 @@ impl AppState {
             pane_graphics_streams: std::collections::HashMap::new(),
             pane_graphics_revision: 0,
             popup_pane: None,
+            note_popup_active: false,
+            note_popup_workspace_id: None,
+            note_popup_outer_rect: None,
+            note_textarea: None,
+            note_cursor: None,
+            note_scroll_dr: std::cell::Cell::new(0),
+            note_scroll_dc: std::cell::Cell::new(0),
             plugin_command_logs: Vec::new(),
             next_plugin_command_log_id: 1,
             plugin_commands_in_flight: 0,

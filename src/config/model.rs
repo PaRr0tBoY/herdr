@@ -239,6 +239,8 @@ pub struct TerminalConfig {
     pub shell_mode: ShellModeConfig,
     /// CWD policy for new interactive panes, tabs, and workspaces.
     pub new_cwd: NewTerminalCwdConfig,
+    /// Default tab type for the new-tab picker. Empty means use default_shell.
+    pub default_tab_type: String,
 }
 
 #[derive(Debug, Deserialize)]

@@ -890,6 +890,8 @@ impl HeadlessServer {
                 cwd: None,
                 focus: true,
                 label,
+                shell_override: None,
+                command_override: None,
                 env: Default::default(),
             }),
         )
@@ -4768,7 +4770,7 @@ mod tests {
                 _ => None,
             })
             .expect("tab created event");
-        assert_eq!(tab_created.label, "ops");
+        assert_eq!(tab_created.label, "2 ops");
         shutdown_test_runtimes(&mut server);
     }
 

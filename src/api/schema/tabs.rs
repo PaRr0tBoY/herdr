@@ -14,6 +14,10 @@ pub struct TabCreateParams {
     pub focus: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shell_override: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command_override: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub env: HashMap<String, String>,
 }

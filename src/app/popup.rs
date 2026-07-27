@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use crate::app::state::AppState;
 use crate::app::{App, Mode};
 use crate::layout::PaneId;
 use crate::pane::PaneLaunchEnv;
@@ -41,6 +42,13 @@ impl App {
     }
 
     pub(crate) fn try_route_paste_to_popup(&mut self, text: &str) -> bool {
+        // Note popup captures paste.
+        if self.state.note_popup_active {
+            if let Some(textarea) = &mut self.state.note_textarea {
+                textarea.insert_str(text);
+            }
+            return true;
+        }
         if self.state.popup_pane.is_none() {
             return false;
         }
@@ -185,6 +193,151 @@ impl App {
         });
         self.state.mode = Mode::Terminal;
         Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Note popup
+// ---------------------------------------------------------------------------
+
+/// Compute selection background for the note popup, matching herdr pane
+/// selection highlight logic. On Windows host theme background is unavailable
+/// so we mix panel_bg toward white/black for visible contrast.
+fn note_selection_bg(p: &crate::app::state::Palette) -> ratatui::style::Color {
+    use ratatui::style::Color;
+    let fallback_rgb = match if p.panel_bg == Color::Reset { p.surface_dim } else { p.panel_bg } {
+        Color::Rgb(r, g, b) => (r, g, b),
+        Color::Black => (0, 0, 0),
+        Color::White => (255, 255, 255),
+        _ => (64, 64, 64),
+    };
+    // Mix toward white for dark bg, black for light bg.
+    let lum = {
+        let (r, g, b) = fallback_rgb;
+        let (r, g, b) = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+        let channel = |v: f32| -> f32 {
+            if v <= 0.03928 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
+        };
+        0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+    };
+    let target: (u8, u8, u8) = if lum < 0.5 { (255, 255, 255) } else { (0, 0, 0) };
+    let mix = |base: u8, tgt: u8| -> u8 {
+        (f32::from(base) + (f32::from(tgt) - f32::from(base)) * 0.40).round() as u8
+    };
+    let (r, g, b) = fallback_rgb;
+    Color::Rgb(mix(r, target.0), mix(g, target.1), mix(b, target.2))
+}
+
+fn selection_fg_for_bg(bg: ratatui::style::Color) -> ratatui::style::Color {
+    use ratatui::style::Color;
+    let lum = match bg {
+        Color::Rgb(r, g, b) => {
+            let (r, g, b) = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+            let channel = |v: f32| -> f32 {
+                if v <= 0.03928 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
+            };
+            0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+        }
+        _ => 0.0,
+    };
+    if lum < 0.5 { Color::White } else { Color::Black }
+}
+
+impl App {
+    /// Toggle the note popup for the active workspace.
+    pub(crate) fn toggle_note_popup(&mut self) -> std::io::Result<()> {
+        if self.state.note_popup_active {
+            self.close_note_popup();
+            return Ok(());
+        }
+        self.open_note_popup()
+    }
+
+    fn open_note_popup(&mut self) -> std::io::Result<()> {
+        let ws_idx = self
+            .state
+            .active
+            .ok_or_else(|| std::io::Error::other("no active workspace"))?;
+        let ws_id = self.state.workspaces[ws_idx].id.clone();
+        let note_path = crate::note::note_path(&ws_id);
+
+        // Compute popup geometry.
+        let terminal_area = self.state.view.terminal_area;
+        let (w, h) = self
+            .state
+            .workspaces
+            .get(ws_idx)
+            .and_then(|ws| ws.note_popup_size)
+            .unwrap_or_else(|| AppState::default_note_popup_size(terminal_area));
+        let outer =
+            AppState::compute_note_popup_rect(self.state.view.note_hit_area, terminal_area, w, h)
+                .ok_or_else(|| std::io::Error::other("terminal too small for note popup"))?;
+
+        // Populate the in-memory buffer from file on first open.
+        let ws = &mut self.state.workspaces[ws_idx];
+        if ws.note_buffer.is_empty() && note_path.exists() {
+            ws.note_buffer = std::fs::read_to_string(&note_path).unwrap_or_default();
+        }
+        let content = std::mem::take(&mut ws.note_buffer);
+        let mut textarea =
+            ratatui_textarea::TextArea::new(content.lines().map(|l| l.to_string()).collect());
+        textarea.set_wrap_mode(ratatui_textarea::WrapMode::Word);
+        textarea.set_style(
+            ratatui::style::Style::default()
+                .fg(self.state.palette.text)
+                .bg(self.state.palette.panel_bg),
+        );
+        // Remove underline from cursor line.
+        textarea.set_cursor_line_style(ratatui::style::Style::default());
+        // Use same selection color logic as herdr panes.
+        // On Windows host_theme.background is None, so mix panel_bg
+        // toward white/black at 0.40 for visible contrast.
+        let sel_bg = note_selection_bg(&self.state.palette);
+        let sel_fg = selection_fg_for_bg(sel_bg);
+        textarea.set_selection_style(
+            ratatui::style::Style::default().fg(sel_fg).bg(sel_bg),
+        );
+        // Restore cursor position from previous session.
+        if let Some((row, col)) = self.state.note_cursor.take() {
+            use ratatui_textarea::CursorMove;
+            let max_row = textarea.lines().len().saturating_sub(1);
+            let row = row.min(max_row);
+            let col = col.min(textarea.lines().get(row).map(|l| l.chars().count()).unwrap_or(0));
+            textarea.move_cursor(CursorMove::Jump(row as u16, col as u16));
+        }
+        self.state.note_textarea = Some(textarea);
+
+        // Tag this popup as the note popup.
+        self.state.note_popup_active = true;
+        self.state.note_popup_workspace_id = Some(ws_id);
+        self.state.note_popup_outer_rect = Some(outer);
+        Ok(())
+    }
+
+    /// Close the note popup and reset note-specific state.
+    pub(crate) fn close_note_popup(&mut self) {
+        // Flush to file so content survives even without explicit Ctrl+S.
+        self.state.save_note_to_file();
+        // Save text back to workspace buffer.
+        if let Some(textarea) = self.state.note_textarea.take() {
+            // Remember cursor position for next open.
+            let cursor = textarea.cursor();
+            self.state.note_cursor = Some((cursor.0, cursor.1));
+            let content: String = textarea
+                .lines()
+                .iter()
+                .map(|l| l.as_str())
+                .collect::<Vec<_>>()
+                .join("\n");
+            if let Some(ws_id) = &self.state.note_popup_workspace_id.clone() {
+                if let Some(ws) = self.state.workspaces.iter_mut().find(|w| &w.id == ws_id) {
+                    ws.note_buffer = content;
+                }
+            }
+        }
+        self.state.note_popup_active = false;
+        self.state.note_popup_workspace_id = None;
+        self.state.note_popup_outer_rect = None;
     }
 }
 

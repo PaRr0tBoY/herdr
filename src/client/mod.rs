@@ -530,7 +530,7 @@ fn enable_windows_virtual_terminal_input() -> WindowsVirtualTerminalInputSetup {
 fn windows_vti_input_backend_enabled() -> bool {
     std::env::var("HERDR_WINDOWS_INPUT_BACKEND")
         .map(|backend| !backend.eq_ignore_ascii_case("crossterm"))
-        .unwrap_or(true)
+        .unwrap_or(false)
 }
 
 #[cfg(any(windows, test))]

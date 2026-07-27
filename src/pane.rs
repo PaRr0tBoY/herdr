@@ -114,6 +114,12 @@ fn apply_pane_launch_env(cmd: &mut CommandBuilder, launch_env: &PaneLaunchEnv) {
     }
     cmd.env(crate::HERDR_ENV_VAR, crate::HERDR_ENV_VALUE);
     crate::integration::apply_pane_base_env(cmd);
+    // Re-apply proxy-related environment variables from the current process.
+    // get_base_env() snapshots the process env first, then overlays HKCU\Environment
+    // registry values which can overwrite the process env with stale data.
+    // Shell panes work around this via profile scripts; argv-spawned agents
+    // have no such chance, so we must restore the process-level values here.
+    reapply_process_proxy_env(cmd);
     match &launch_env.identity {
         PaneLaunchIdentity::Inherit => {}
         PaneLaunchIdentity::Managed {
@@ -127,6 +133,28 @@ fn apply_pane_launch_env(cmd: &mut CommandBuilder, launch_env: &PaneLaunchEnv) {
         }
         PaneLaunchIdentity::OmitPane => {
             cmd.env_remove(crate::integration::HERDR_PANE_ID_ENV_VAR);
+        }
+    }
+}
+
+/// Re-apply proxy and TLS certificate environment variables from the current
+/// process, overwriting any stale values that may have been loaded from the
+/// Windows registry by get_base_env().
+fn reapply_process_proxy_env(cmd: &mut CommandBuilder) {
+    // Proxy variables — process env takes priority over registry snapshots
+    for key in &[
+        "HTTPS_PROXY",
+        "HTTP_PROXY",
+        "NO_PROXY",
+        "ALL_PROXY",
+        "NODE_EXTRA_CA_CERTS",
+        "NODE_USE_ENV_PROXY",
+        "REQUESTS_CA_BUNDLE",
+        "SSL_CERT_FILE",
+        "CURL_CA_BUNDLE",
+    ] {
+        if let Ok(value) = std::env::var(key) {
+            cmd.env(key, &value);
         }
     }
 }
@@ -1698,6 +1726,17 @@ impl PaneRuntime {
                 "argv must not be empty",
             ));
         };
+        // Diagnostic: log spawn_argv_command for debugging launcher-spawned agents
+        tracing::info!(
+            pane = pane_id.raw(),
+            program,
+            args = ?args,
+            cwd = ?cwd,
+            https_proxy = std::env::var("HTTPS_PROXY").ok(),
+            http_proxy = std::env::var("HTTP_PROXY").ok(),
+            node_extra_ca_certs = std::env::var("NODE_EXTRA_CA_CERTS").ok(),
+            "spawn_argv_command: spawning agent argv"
+        );
         let mut cmd = CommandBuilder::new(program);
         for arg in args {
             cmd.arg(arg);
