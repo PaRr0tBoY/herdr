@@ -263,8 +263,8 @@ mod tests {
         assert_eq!(
             labels,
             vec![
-                ("main·pi".into(), "pi".into(), Some(Agent::Pi)),
-                ("review·claude".into(), "claude".into(), Some(Agent::Claude)),
+                ("1 main·pi".into(), "pi".into(), Some(Agent::Pi)),
+                ("2 review·claude".into(), "claude".into(), Some(Agent::Claude)),
             ]
         );
     }

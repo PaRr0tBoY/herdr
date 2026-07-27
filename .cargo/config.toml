@@ -1,0 +1,3 @@
+# Use LLVM lld linker instead of MSVC link.exe for faster linking
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld"
