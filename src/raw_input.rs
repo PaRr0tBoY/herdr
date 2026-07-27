@@ -776,6 +776,7 @@ enum ControlStringFamily {
     HostColorSchemeCsi,
     OrphanedSgrMouseTail,
 }
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ControlString {
     Complete {
