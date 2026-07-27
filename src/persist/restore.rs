@@ -425,6 +425,11 @@ fn restore_workspace(
             next_public_tab_number,
             active_tab: snap.active_tab.min(tabs.len().saturating_sub(1)),
             tabs,
+            note_popup_size: match (snap.note_popup_width, snap.note_popup_height) {
+                (Some(w), Some(h)) => Some((w, h)),
+                _ => None,
+            },
+            note_buffer: String::new(),
             #[cfg(test)]
             test_runtimes: HashMap::new(),
         })
@@ -714,6 +719,7 @@ fn restore_tab(
         Some((
             crate::workspace::Tab {
                 custom_name: snap.custom_name.clone(),
+                synced_agent_name: snap.synced_agent_name.clone(),
                 number,
                 root_pane,
                 layout,
@@ -1180,6 +1186,7 @@ mod tests {
                 next_public_tab_number: 0,
                 tabs: vec![TabSnapshot {
                     custom_name: None,
+                    synced_agent_name: None,
                     layout: LayoutSnapshot::Pane(0),
                     panes: HashMap::from([(
                         0,
@@ -1202,6 +1209,8 @@ mod tests {
                     root_pane: Some(0),
                 }],
                 active_tab: 0,
+                note_popup_width: None,
+                note_popup_height: None,
             }],
             active: Some(0),
             selected: 0,
@@ -1260,6 +1269,7 @@ mod tests {
                 next_public_tab_number: 6,
                 tabs: vec![TabSnapshot {
                     custom_name: None,
+                    synced_agent_name: None,
                     layout: LayoutSnapshot::Split {
                         direction: super::super::snapshot::DirectionSnapshot::Horizontal,
                         ratio: 0.5,
@@ -1295,6 +1305,8 @@ mod tests {
                     root_pane: Some(10),
                 }],
                 active_tab: 0,
+                note_popup_width: None,
+                note_popup_height: None,
             }],
             active: Some(0),
             selected: 0,
@@ -1370,6 +1382,7 @@ mod tests {
                 tabs: vec![
                     TabSnapshot {
                         custom_name: None,
+                        synced_agent_name: None,
                         layout: LayoutSnapshot::Pane(10),
                         panes: HashMap::from([pane_snap("10")]),
                         zoomed: false,
@@ -1378,6 +1391,7 @@ mod tests {
                     },
                     TabSnapshot {
                         custom_name: None,
+                        synced_agent_name: None,
                         layout: LayoutSnapshot::Pane(11),
                         panes: HashMap::from([pane_snap("11")]),
                         zoomed: false,
@@ -1386,6 +1400,7 @@ mod tests {
                     },
                     TabSnapshot {
                         custom_name: None,
+                        synced_agent_name: None,
                         layout: LayoutSnapshot::Pane(12),
                         panes: HashMap::from([pane_snap("12")]),
                         zoomed: false,
@@ -1394,6 +1409,7 @@ mod tests {
                     },
                     TabSnapshot {
                         custom_name: None,
+                        synced_agent_name: None,
                         layout: LayoutSnapshot::Pane(13),
                         panes: HashMap::from([(13, final_pane)]),
                         zoomed: false,
@@ -1402,6 +1418,8 @@ mod tests {
                     },
                 ],
                 active_tab: 3,
+                note_popup_width: None,
+                note_popup_height: None,
             }],
             active: Some(0),
             selected: 0,
@@ -1452,6 +1470,7 @@ mod tests {
             next_public_tab_number: 0,
             tabs: vec![TabSnapshot {
                 custom_name: None,
+                synced_agent_name: None,
                 layout: LayoutSnapshot::Split {
                     direction: super::super::snapshot::DirectionSnapshot::Horizontal,
                     ratio: 0.5,
@@ -1464,6 +1483,8 @@ mod tests {
                 root_pane: Some(10),
             }],
             active_tab: 0,
+            note_popup_width: None,
+            note_popup_height: None,
         };
         let mut next_public_pane_number = 1;
 
@@ -1491,6 +1512,7 @@ mod tests {
                 next_public_tab_number: 0,
                 tabs: vec![TabSnapshot {
                     custom_name: None,
+                    synced_agent_name: None,
                     layout: LayoutSnapshot::Pane(0),
                     panes: HashMap::from([(
                         0,
@@ -1513,6 +1535,8 @@ mod tests {
                     root_pane: Some(0),
                 }],
                 active_tab: 0,
+                note_popup_width: None,
+                note_popup_height: None,
             }],
             active: Some(0),
             selected: 0,
@@ -1700,6 +1724,7 @@ mod tests {
                 next_public_tab_number: 0,
                 tabs: vec![TabSnapshot {
                     custom_name: None,
+                    synced_agent_name: None,
                     layout: LayoutSnapshot::Pane(0),
                     panes,
                     zoomed: false,
@@ -1707,6 +1732,8 @@ mod tests {
                     root_pane: Some(0),
                 }],
                 active_tab: 0,
+                note_popup_width: None,
+                note_popup_height: None,
             }],
             active: Some(0),
             selected: 0,

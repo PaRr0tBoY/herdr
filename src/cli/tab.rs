@@ -119,6 +119,8 @@ fn tab_create(args: &[String]) -> std::io::Result<i32> {
         cwd,
         focus,
         label,
+        shell_override: None,
+        command_override: None,
         env,
     })
 }

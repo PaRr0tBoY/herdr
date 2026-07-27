@@ -38,6 +38,7 @@ Examples:
 
 ### Syncing upstream
 
+
 This fork tracks `upstream/master`. To pull in upstream changes:
 
 ```bash
@@ -121,5 +122,6 @@ If you need to patch the vendored terminal library (e.g., for Windows fixes):
 - When updating the vendored source from upstream, re-check every active patch.
 
 ### Local planning
+
 
 Put local PRDs, planning notes, and exploratory specs under `.local/prd/`. `.local/` is gitignored and locally controlled.

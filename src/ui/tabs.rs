@@ -12,6 +12,7 @@ use crate::app::AppState;
 const MIN_TAB_WIDTH: u16 = 8;
 const NEW_TAB_WIDTH: u16 = 3;
 const TAB_SCROLL_BUTTON_WIDTH: u16 = 3;
+pub(crate) const NOTE_BUTTON_WIDTH: u16 = 6;
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct TabBarView {
@@ -20,6 +21,7 @@ pub(crate) struct TabBarView {
     pub scroll_left_hit_area: Rect,
     pub scroll_right_hit_area: Rect,
     pub new_tab_hit_area: Rect,
+    pub note_hit_area: Rect,
 }
 
 fn tab_width(ws: &crate::workspace::Workspace, tab_idx: usize) -> u16 {
@@ -131,6 +133,7 @@ pub(crate) fn compute_tab_bar_view(
             scroll_left_hit_area: Rect::default(),
             scroll_right_hit_area: Rect::default(),
             new_tab_hit_area: Rect::default(),
+            note_hit_area: Rect::default(),
         };
     }
 
@@ -138,7 +141,7 @@ pub(crate) fn compute_tab_bar_view(
     let all_tabs_area = Rect::new(
         area.x,
         area.y,
-        area.width.saturating_sub(NEW_TAB_WIDTH),
+        area.width.saturating_sub(NEW_TAB_WIDTH).saturating_sub(NOTE_BUTTON_WIDTH),
         area.height,
     );
     let all_tabs = layout_tab_hit_areas(ws, all_tabs_area, 0);
@@ -148,7 +151,16 @@ pub(crate) fn compute_tab_bar_view(
         let new_tab_hit_area = Rect::new(
             new_tab_x,
             area.y,
-            area_right.saturating_sub(new_tab_x).min(NEW_TAB_WIDTH),
+            (area_right.saturating_sub(NOTE_BUTTON_WIDTH))
+                .saturating_sub(new_tab_x)
+                .min(NEW_TAB_WIDTH),
+            1,
+        );
+        let note_x = area_right.saturating_sub(NOTE_BUTTON_WIDTH);
+        let note_hit_area = Rect::new(
+            note_x,
+            area.y,
+            area_right.saturating_sub(note_x).min(NOTE_BUTTON_WIDTH),
             1,
         );
         return TabBarView {
@@ -157,12 +169,14 @@ pub(crate) fn compute_tab_bar_view(
             scroll_left_hit_area: Rect::default(),
             scroll_right_hit_area: Rect::default(),
             new_tab_hit_area,
+            note_hit_area,
         };
     }
 
     let left_hit_area = Rect::new(area.x, area.y, TAB_SCROLL_BUTTON_WIDTH.min(area.width), 1);
     let tab_area_x = left_hit_area.x + left_hit_area.width;
     let reserved_trailing_width = NEW_TAB_WIDTH.saturating_add(TAB_SCROLL_BUTTON_WIDTH);
+    let reserved_trailing_width = reserved_trailing_width.saturating_add(NOTE_BUTTON_WIDTH);
     let tab_area_right = area_right.saturating_sub(reserved_trailing_width);
     let tab_area = Rect::new(
         tab_area_x,
@@ -191,7 +205,16 @@ pub(crate) fn compute_tab_bar_view(
     let new_tab_hit_area = Rect::new(
         new_tab_x,
         area.y,
-        area_right.saturating_sub(new_tab_x).min(NEW_TAB_WIDTH),
+        (area_right.saturating_sub(NOTE_BUTTON_WIDTH))
+            .saturating_sub(new_tab_x)
+            .min(NEW_TAB_WIDTH),
+        1,
+    );
+    let note_x = area_right.saturating_sub(NOTE_BUTTON_WIDTH);
+    let note_hit_area = Rect::new(
+        note_x,
+        area.y,
+        area_right.saturating_sub(note_x).min(NOTE_BUTTON_WIDTH),
         1,
     );
 
@@ -201,6 +224,7 @@ pub(crate) fn compute_tab_bar_view(
         scroll_left_hit_area: left_hit_area,
         scroll_right_hit_area: right_hit_area,
         new_tab_hit_area,
+        note_hit_area,
     }
 }
 
@@ -367,6 +391,19 @@ pub(super) fn render_tab_bar(app: &AppState, frame: &mut Frame, area: Rect) {
         );
     }
 
+    // Note popup toggle button.
+    if app.mouse_capture && app.view.note_hit_area.width > 0 {
+        let style = if app.note_popup_active {
+            Style::default().fg(p.panel_bg).bg(p.accent)
+        } else {
+            Style::default().fg(p.overlay1)
+        };
+        frame.render_widget(
+            Paragraph::new(" note ").style(style),
+            app.view.note_hit_area,
+        );
+    }
+
     if first_visible_idx.is_some_and(|idx| idx > 0) {
         let x = if app.mouse_capture && app.view.tab_scroll_left_hit_area.width > 0 {
             app.view.tab_scroll_left_hit_area.x + app.view.tab_scroll_left_hit_area.width
@@ -430,11 +467,11 @@ mod tests {
 
         let row = buffer_row_text(terminal.backend().buffer(), app.view.tab_bar_rect, 0);
         assert!(row.contains(" 1 Z"), "tab row: {row:?}");
-        assert!(row.contains(" test Z"), "tab row: {row:?}");
+        assert!(row.contains("2 test Z"), "tab row: {row:?}");
         assert_eq!(app.workspaces[0].tab_display_name(0).as_deref(), Some("1"));
         assert_eq!(
             app.workspaces[0].tab_display_name(custom_tab).as_deref(),
-            Some("test")
+            Some("2 test")
         );
     }
 
@@ -469,7 +506,7 @@ mod tests {
         ws.tabs[0].set_custom_name("abcdefgh".into());
         ws.tabs[0].zoomed = true;
 
-        assert_eq!(tab_width(&ws, 0), 14);
+        assert_eq!(tab_width(&ws, 0), 16);
     }
 
     #[test]
@@ -477,9 +514,10 @@ mod tests {
         let mut ws = Workspace::test_new("test");
         ws.tabs[0].set_custom_name("提交 herdr 的反馈".into());
 
+        // Tab display name includes number prefix: "1 <name>".
         assert_eq!(
             tab_width(&ws, 0),
-            display_width_u16("提交 herdr 的反馈") + 4
+            display_width_u16("1 提交 herdr 的反馈") + 4
         );
     }
 

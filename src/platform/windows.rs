@@ -17,7 +17,7 @@ use windows_sys::{
         },
         System::{
             Console::GetConsoleWindow,
-            DataExchange::{CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData},
+            DataExchange::{CloseClipboard, EmptyClipboard, GetClipboardData, OpenClipboard, SetClipboardData},
             Diagnostics::{
                 Debug::ReadProcessMemory,
                 ToolHelp::{
@@ -634,7 +634,36 @@ pub fn write_clipboard(bytes: &[u8]) -> bool {
 }
 
 pub fn read_clipboard_text() -> Option<String> {
-    None
+    tracing::debug!("read_clipboard_text called on Windows");
+    unsafe {
+        let owner = GetConsoleWindow();
+        // On headless server, GetConsoleWindow() returns null.
+        // Try the console window first; fall back to NULL (current task).
+        if OpenClipboard(owner) == 0 {
+            tracing::debug!("OpenClipboard failed (owner was null: {})", owner.is_null());
+            return None;
+        }
+        let _clipboard = ClipboardGuard;
+
+        let handle = GetClipboardData(CF_UNICODETEXT as u32);
+        if handle.is_null() {
+            tracing::debug!("GetClipboardData returned null");
+            return None;
+        }
+        let locked = GlobalLock(handle);
+        if locked.is_null() {
+            tracing::debug!("GlobalLock returned null");
+            return None;
+        }
+        let text = {
+            let slice = std::slice::from_raw_parts(locked.cast::<u16>(), 1024 * 1024);
+            let null_pos = slice.iter().position(|&c| c == 0).unwrap_or(slice.len());
+            String::from_utf16_lossy(&slice[..null_pos])
+        };
+        GlobalUnlock(handle);
+        tracing::debug!(len = text.len(), "read_clipboard_text success");
+        Some(text)
+    }
 }
 
 pub fn open_url(url: &str) -> std::io::Result<()> {
