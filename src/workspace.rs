@@ -196,6 +196,10 @@ pub struct Workspace {
     pub(crate) next_public_tab_number: usize,
     pub tabs: Vec<Tab>,
     pub active_tab: usize,
+    /// Remembered note popup size (width, height) in cells.
+    pub note_popup_size: Option<(u16, u16)>,
+    /// In-memory note buffer. Survives popup close without saving to file.
+    pub note_buffer: String,
     #[cfg(test)]
     pub(crate) test_runtimes: HashMap<PaneId, TerminalRuntime>,
 }
@@ -261,6 +265,8 @@ impl Workspace {
             next_public_tab_number: 2,
             tabs: vec![tab],
             active_tab: 0,
+            note_popup_size: None,
+            note_buffer: String::new(),
             #[cfg(test)]
             test_runtimes: HashMap::new(),
         }
@@ -449,6 +455,8 @@ impl Workspace {
                 next_public_tab_number: 2,
                 tabs: vec![tab],
                 active_tab: 0,
+                note_popup_size: None,
+                note_buffer: String::new(),
                 #[cfg(test)]
                 test_runtimes: HashMap::new(),
             },
@@ -1290,6 +1298,8 @@ impl Workspace {
             next_public_tab_number: 2,
             tabs: vec![tab],
             active_tab: 0,
+            note_popup_size: None,
+            note_buffer: String::new(),
             test_runtimes: HashMap::new(),
         }
     }

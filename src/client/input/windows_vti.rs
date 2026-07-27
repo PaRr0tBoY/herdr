@@ -574,6 +574,15 @@ impl WindowsInputMapper {
         }
 
         let is_alt_code = Self::is_alt_code(key);
+        // IME-committed characters: emit exactly one Text event, ignoring repeat_count.
+        if !key.key_down && key.virtual_key_code == 0 && key.unicode != 0 {
+            if let Some(codepoint) = self.utf16_unit_to_char(key.unicode) {
+                if !codepoint.is_control() {
+                    return vec![crate::protocol::ClientInputEvent::Text { codepoint }];
+                }
+            }
+            return Vec::new();
+        }
         (0..key.repeat_count.max(1))
             .filter_map(|repeat_idx| {
                 self.translate_semantic_key_event(
@@ -585,7 +594,9 @@ impl WindowsInputMapper {
     }
 
     fn key_record_can_emit_event(&self, key: WindowsKeyRecord) -> bool {
-        key.key_down || Self::is_alt_code(key) || key.virtual_key_code != 0
+        // IME-committed characters arrive with key_down=false and vk=0
+        // but carry a non-zero unicode codepoint that must be emitted.
+        key.key_down || Self::is_alt_code(key) || key.virtual_key_code != 0 || key.unicode != 0
     }
 
     fn key_record_is_modifier_only(key: WindowsKeyRecord) -> bool {

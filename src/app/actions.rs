@@ -5,6 +5,8 @@ use std::time::Instant;
 
 use tracing::{info, warn};
 
+use ratatui::layout::Rect;
+
 use crate::detect::{Agent, AgentState};
 use crate::events::AppEvent;
 use crate::layout::PaneId;
@@ -1628,9 +1630,29 @@ impl AppState {
             pane_ids.extend(self.pane_ids_for_workspace(*idx));
             if let Some(workspace_id) = self.workspaces.get(*idx).map(|ws| ws.id.clone()) {
                 crate::logging::workspace_closed(&workspace_id);
+                crate::note::delete_note_file(&workspace_id);
             }
         }
         self.remove_plugin_pane_records(pane_ids);
+        // Reset note popup if it belongs to a workspace being closed.
+        if self.note_popup_active {
+            let should_reset = self
+                .note_popup_workspace_id
+                .as_ref()
+                .and_then(|popup_ws_id| {
+                    close_indices.iter().find(|idx| {
+                        self.workspaces
+                            .get(**idx)
+                            .is_some_and(|ws| ws.id == *popup_ws_id)
+                    })
+                })
+                .is_some();
+            if should_reset {
+                self.note_popup_active = false;
+                self.note_popup_workspace_id = None;
+                self.note_popup_outer_rect = None;
+            }
+        }
         for idx in close_indices.iter().rev() {
             self.workspaces.remove(*idx);
         }
@@ -1678,6 +1700,110 @@ impl AppState {
         self.view.tab_scroll_left_hit_area = layout.scroll_left_hit_area;
         self.view.tab_scroll_right_hit_area = layout.scroll_right_hit_area;
         self.view.new_tab_hit_area = layout.new_tab_hit_area;
+        self.view.note_hit_area = layout.note_hit_area;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Note popup
+// ---------------------------------------------------------------------------
+
+/// Default note popup size fractions and minimum dimensions.
+const NOTE_POPUP_WIDTH_FRAC: f32 = 0.5;
+const NOTE_POPUP_HEIGHT_FRAC: f32 = 0.4;
+const NOTE_POPUP_MIN_W: u16 = 12;
+const NOTE_POPUP_MIN_H: u16 = 3;
+
+impl AppState {
+    /// Compute the note popup outer rect anchored so the top-right corner
+    /// sits at the N button position (or just below the tab bar).
+    pub(crate) fn compute_note_popup_rect(
+        note_hit_area: Rect,
+        terminal_area: Rect,
+        width: u16,
+        height: u16,
+    ) -> Option<Rect> {
+        let w = width.max(NOTE_POPUP_MIN_W).min(terminal_area.width);
+        let h = height.max(NOTE_POPUP_MIN_H).min(terminal_area.height);
+        // Anchor: top-right of popup = bottom-right of N button.
+        let anchor_x = note_hit_area.x + note_hit_area.width;
+        let anchor_y = note_hit_area.y + note_hit_area.height;
+        let x = anchor_x
+            .saturating_sub(w)
+            .min(terminal_area.x + terminal_area.width);
+        let y = anchor_y.min(terminal_area.y + terminal_area.height);
+        let w = w.min(terminal_area.x + terminal_area.width - x);
+        let h = h.min(terminal_area.y + terminal_area.height - y);
+        if w < NOTE_POPUP_MIN_W || h < NOTE_POPUP_MIN_H {
+            return None;
+        }
+        Some(Rect::new(x, y, w, h))
+    }
+
+    /// Compute default note popup size from terminal area.
+    pub(crate) fn default_note_popup_size(terminal_area: Rect) -> (u16, u16) {
+        let w = (terminal_area.width as f32 * NOTE_POPUP_WIDTH_FRAC) as u16;
+        let h = (terminal_area.height as f32 * NOTE_POPUP_HEIGHT_FRAC) as u16;
+        (w.max(NOTE_POPUP_MIN_W), h.max(NOTE_POPUP_MIN_H))
+    }
+
+    /// Handle a drag on the note popup's bottom-left resize corner.
+    pub(crate) fn handle_note_popup_resize_drag(
+        &mut self,
+        col: u16,
+        row: u16,
+        start_rect: Rect,
+        start_col: u16,
+        start_row: u16,
+    ) {
+        // Use signed arithmetic so dragging right/up can shrink.
+        let dx: i32 = start_col as i32 - col as i32;
+        let dy: i32 = row as i32 - start_row as i32;
+        let new_w = ((start_rect.width as i32 + dx).max(NOTE_POPUP_MIN_W as i32)) as u16;
+        let new_h = ((start_rect.height as i32 + dy).max(NOTE_POPUP_MIN_H as i32)) as u16;
+        // Anchor the top-right corner to the N button position.
+        let anchor_x = self.view.note_hit_area.x + self.view.note_hit_area.width;
+        let new_x = anchor_x.saturating_sub(new_w);
+        let new_y = start_rect.y;
+        // Keep top-right corner fixed.
+        let terminal = self.view.terminal_area;
+        let new_x = new_x.max(terminal.x);
+        let new_y = new_y.max(terminal.y);
+        let new_w = new_w.min(terminal.x + terminal.width - new_x);
+        let new_h = new_h.min(terminal.y + terminal.height - new_y);
+        if new_w < NOTE_POPUP_MIN_W || new_h < NOTE_POPUP_MIN_H {
+            return;
+        }
+        // Persist size to the workspace.
+        if let Some(ws_id) = &self.note_popup_workspace_id {
+            if let Some(ws) = self.workspaces.iter_mut().find(|ws| &ws.id == ws_id) {
+                ws.note_popup_size = Some((new_w, new_h));
+            }
+        }
+        self.note_popup_outer_rect = Some(Rect::new(new_x, new_y, new_w, new_h));
+    }
+
+    /// Save the current note textarea content to the workspace note file.
+    pub(crate) fn save_note_to_file(&self) {
+        let Some(textarea) = &self.note_textarea else {
+            return;
+        };
+        let content: String = textarea
+            .lines()
+            .iter()
+            .map(|l| l.as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+        let Some(ws_id) = &self.note_popup_workspace_id else {
+            return;
+        };
+        let path = crate::note::note_path(ws_id);
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Err(err) = std::fs::write(&path, &content) {
+            tracing::warn!(err = %err, path = %path.display(), "failed to save note");
+        }
     }
 }
 
@@ -5340,7 +5466,7 @@ mod tests {
         let toast = state.toast.as_ref().unwrap();
         assert_eq!(toast.kind, ToastKind::NeedsAttention);
         assert_eq!(toast.title, "pi needs attention");
-        assert_eq!(toast.context, "background · 2 · logs");
+        assert_eq!(toast.context, "background · 2 · 2 logs");
     }
 
     #[test]
@@ -5366,7 +5492,7 @@ mod tests {
         let toast = state.toast.as_ref().unwrap();
         assert_eq!(toast.kind, ToastKind::NeedsAttention);
         assert_eq!(toast.title, "pi needs attention");
-        assert_eq!(toast.context, "active · 1 · logs");
+        assert_eq!(toast.context, "active · 1 · 2 logs");
     }
 
     #[test]

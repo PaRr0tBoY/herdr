@@ -602,6 +602,7 @@ impl App {
                 toast_hit_area: Rect::default(),
                 pane_infos: Vec::new(),
                 split_borders: Vec::new(),
+                note_hit_area: Rect::default(),
             },
             drag: None,
             workspace_press: None,
@@ -688,6 +689,13 @@ impl App {
             pane_graphics_streams: std::collections::HashMap::new(),
             pane_graphics_revision: 0,
             popup_pane: None,
+            note_popup_active: false,
+            note_popup_workspace_id: None,
+            note_popup_outer_rect: None,
+            note_textarea: None,
+            note_cursor: None,
+            note_scroll_dr: std::cell::Cell::new(0),
+            note_scroll_dc: std::cell::Cell::new(0),
             plugin_command_logs: Vec::new(),
             next_plugin_command_log_id: 1,
             plugin_commands_in_flight: 0,
@@ -1597,10 +1605,111 @@ impl App {
             diagnostics,
         }
     }
+
+    /// Coalesce key sequences that form a bracketed paste
+    /// (`Esc [ 2 0 0 ~` … `Esc [ 2 0 1 ~`) into `RawInputEvent::Paste`.
+    /// Returns the events unchanged if no bracketed paste is detected.
+    fn coalesce_bracketed_paste(
+        mut events: Vec<crate::raw_input::RawInputEvent>,
+    ) -> Vec<crate::raw_input::RawInputEvent> {
+        use crossterm::event::KeyCode;
+        let mut i = 0;
+        while i + 12 <= events.len() {
+            // Look for Esc [ 2 0 0 ~  start marker
+            if is_key_press(events.get(i), KeyCode::Esc) {
+                tracing::debug!(
+                    i = i,
+                    next_codes = ?events.get(i + 1).and_then(|e| match e { crate::raw_input::RawInputEvent::Key(k) => Some(k.code), _ => None }),
+                    "bracketed paste: Esc at position"
+                );
+            }
+            if !is_key_press(events.get(i), KeyCode::Esc)
+                || !is_key_char(events.get(i + 1), '[')
+                || !is_key_char(events.get(i + 2), '2')
+                || !is_key_char(events.get(i + 3), '0')
+                || !is_key_char(events.get(i + 4), '0')
+                || !is_key_char(events.get(i + 5), '~')
+            {
+                i += 1;
+                continue;
+            }
+            let mut paste: Vec<u8> = Vec::new();
+            let mut j = i + 6;
+            let mut found_end = false;
+            while j + 6 <= events.len() {
+                if is_key_press(events.get(j), KeyCode::Esc)
+                    && is_key_char(events.get(j + 1), '[')
+                    && is_key_char(events.get(j + 2), '2')
+                    && is_key_char(events.get(j + 3), '0')
+                    && is_key_char(events.get(j + 4), '1')
+                    && is_key_char(events.get(j + 5), '~')
+                {
+                    found_end = true;
+                    break;
+                }
+                match &events[j] {
+                    crate::raw_input::RawInputEvent::Key(k) => match k.code {
+                        KeyCode::Char(c) => {
+                            let mut buf = [0u8; 4];
+                            paste.extend_from_slice(c.encode_utf8(&mut buf).as_bytes());
+                        }
+                        KeyCode::Enter => paste.push(b'\n'),
+                        KeyCode::Tab => paste.push(b'\t'),
+                        _ => {}
+                    },
+                    _ => {}
+                }
+                j += 1;
+            }
+            if found_end {
+                let text = String::from_utf8_lossy(&paste).into_owned();
+                tracing::debug!(len = text.len(), "bracketed paste: coalesced from key events");
+                // Drain from i to j + 6 and insert one Paste event.
+                let drain_end = j + 6;
+                events.drain(i..drain_end);
+                events.insert(
+                    i,
+                    crate::raw_input::RawInputEvent::Paste(text),
+                );
+                i += 1;
+            } else {
+                // No end marker found: drain the incomplete sequence.
+                events.drain(i..);
+                break;
+            }
+        }
+        events
+    }
 }
 
 // ---------------------------------------------------------------------------
 // Input routing for headless server mode
+// ---------------------------------------------------------------------------
+
+fn is_key_press(ev: Option<&crate::raw_input::RawInputEvent>, code: crossterm::event::KeyCode) -> bool {
+    match ev {
+        Some(crate::raw_input::RawInputEvent::Key(k))
+            if k.kind == crossterm::event::KeyEventKind::Press && k.code == code =>
+        {
+            true
+        }
+        _ => false,
+    }
+}
+
+fn is_key_char(ev: Option<&crate::raw_input::RawInputEvent>, ch: char) -> bool {
+    match ev {
+        Some(crate::raw_input::RawInputEvent::Key(k))
+            if k.kind == crossterm::event::KeyEventKind::Press
+                && k.code == crossterm::event::KeyCode::Char(ch) =>
+        {
+            true
+        }
+        _ => false,
+    }
+}
+
+// ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
 impl App {
@@ -1628,9 +1737,10 @@ impl App {
     pub(crate) fn route_client_events_from(
         &mut self,
         source_id: InputSourceId,
-        events: Vec<crate::raw_input::RawInputEvent>,
+        mut events: Vec<crate::raw_input::RawInputEvent>,
         apply_host_terminal_theme: bool,
     ) {
+        events = Self::coalesce_bracketed_paste(events);
         for event in events {
             let previous_mode = self.state.mode;
             match event {
@@ -1641,6 +1751,13 @@ impl App {
                             if self.state.popup_pane.is_some() || self.state.mode == Mode::Terminal
                             {
                                 self.suppressed_repeat_keys.remove(&pressed_key_id);
+                                // Note popup captures all keyboard input.
+                                if self.state.note_popup_active {
+                                    self.pressed_terminal_keys.remove(&pressed_key_id);
+                                    self.suppressed_repeat_keys.remove(&pressed_key_id);
+                                    self.handle_non_terminal_key_headless(key);
+                                    continue;
+                                }
                                 if let Some(target) =
                                     self.handle_terminal_key_headless_from(source_id, key)
                                 {
@@ -1690,6 +1807,22 @@ impl App {
                     if self.state.popup_pane.is_some() || self.state.mouse_capture {
                         self.handle_mouse_event_headless(source_id, mouse);
                     } else {
+                        // Handle note popup toggle via tab bar N button.
+                        let note_area = self.state.view.note_hit_area;
+                        if note_area.width > 0
+                            && mouse.row >= note_area.y
+                            && mouse.row < note_area.y + note_area.height
+                            && mouse.column >= note_area.x
+                            && mouse.column < note_area.x + note_area.width
+                        {
+                            if let Err(err) = self.toggle_note_popup() {
+                                tracing::warn!(err = %err, "headless: failed to toggle note popup");
+                            }
+                        }
+                        // Forward mouse events to the note popup (resize, close, selection).
+                        if self.state.note_popup_active {
+                            self.handle_note_popup_mouse(mouse);
+                        }
                         self.state
                             .handle_pane_mouse_only(&self.terminal_runtimes, mouse);
                     }
@@ -1751,6 +1884,60 @@ impl App {
     /// Uses the standalone handler functions that work on `&mut AppState`
     /// since the server doesn't have the async context of the monolithic App.
     fn handle_non_terminal_key_headless(&mut self, key: crate::input::TerminalKey) {
+        if self.state.note_popup_active {
+            // Ctrl+S: save note to file.
+            if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL)
+                && key.code == crossterm::event::KeyCode::Char('s')
+            {
+                self.state.save_note_to_file();
+            return;
+            }
+            // Ctrl+V: paste from clipboard.
+            if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL)
+                && key.code == crossterm::event::KeyCode::Char('v')
+            {
+                if let Some(text) = crate::platform::read_clipboard_text() {
+                    if let Some(textarea) = &mut self.state.note_textarea {
+                        textarea.insert_str(&text);
+                        self.state.save_note_to_file();
+            }
+            }
+            return;
+            }
+            if key.code == crossterm::event::KeyCode::Esc {
+                // Esc is a no-op; see note in input/mod.rs.
+            return;
+            }
+            // Ctrl+Z: undo.
+            if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL)
+                && key.code == crossterm::event::KeyCode::Char('z')
+            {
+                if let Some(textarea) = &mut self.state.note_textarea {
+                    textarea.undo();
+            }
+            return;
+            }
+            // Ctrl+Y: redo.
+            if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL)
+                && key.code == crossterm::event::KeyCode::Char('y')
+            {
+                if let Some(textarea) = &mut self.state.note_textarea {
+                    textarea.redo();
+            }
+            return;
+            }
+            // Forward character input to the textarea.
+            if let Some(textarea) = &mut self.state.note_textarea {
+                let key_event = key.as_key_event();
+                let input: ratatui_textarea::Input = key_event.into();
+                textarea.input(input);
+                // Autosave on every edit so notes survive crashes / taskkill / shutdown.
+                self.state.save_note_to_file();
+            } else {
+                return;
+            }
+            return;
+        }
         let key_event = key.as_key_event();
         if input::modal_paste_target_active(&self.state)
             && input::is_modal_paste_shortcut(&key_event)

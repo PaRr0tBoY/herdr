@@ -9,7 +9,7 @@ use crate::terminal::TerminalRuntimeRegistry;
 use crate::workspace::Workspace;
 
 /// Current snapshot format version.
-pub(super) const SNAPSHOT_VERSION: u32 = 3;
+pub(super) const SNAPSHOT_VERSION: u32 = 4;
 
 /// Serializable snapshot of the entire herdr session.
 #[derive(Serialize, Deserialize)]
@@ -46,7 +46,7 @@ pub struct TabHistorySnapshot {
     pub panes: HashMap<u32, PaneHistorySnapshot>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct WorkspaceSnapshot {
     #[serde(default)]
     pub id: Option<String>,
@@ -66,6 +66,10 @@ pub struct WorkspaceSnapshot {
     pub tabs: Vec<TabSnapshot>,
     #[serde(default)]
     pub active_tab: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note_popup_width: Option<u16>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note_popup_height: Option<u16>,
 }
 
 #[derive(Deserialize)]
@@ -167,6 +171,8 @@ impl From<LegacyWorkspaceSnapshot> for WorkspaceSnapshot {
             next_public_tab_number: 0,
             tabs: vec![tab],
             active_tab: 0,
+            note_popup_width: None,
+            note_popup_height: None,
         }
     }
 }
@@ -308,6 +314,8 @@ fn capture_workspace(
             .map(|tab| capture_tab(tab, terminals, terminal_runtimes))
             .collect(),
         active_tab: ws.active_tab,
+        note_popup_width: ws.note_popup_size.map(|(w, _)| w),
+        note_popup_height: ws.note_popup_size.map(|(_, h)| h),
     }
 }
 
@@ -691,6 +699,8 @@ mod tests {
                     root_pane: Some(0),
                 }],
                 active_tab: 0,
+                note_popup_width: None,
+                note_popup_height: None,
             }],
             active: Some(0),
             selected: 0,
@@ -1254,6 +1264,8 @@ mod tests {
                     root_pane: Some(0),
                 }],
                 active_tab: 0,
+                note_popup_width: None,
+                note_popup_height: None,
             }],
             active: Some(0),
             selected: 0,

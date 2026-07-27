@@ -309,6 +309,7 @@ fn compute_view_internal(
         tab_scroll_left_hit_area: tab_bar_view.scroll_left_hit_area,
         tab_scroll_right_hit_area: tab_bar_view.scroll_right_hit_area,
         new_tab_hit_area: tab_bar_view.new_tab_hit_area,
+        note_hit_area: tab_bar_view.note_hit_area,
         terminal_area,
         mobile_header_rect: Rect::default(),
         mobile_menu_hit_area: Rect::default(),
@@ -378,6 +379,7 @@ fn compute_mobile_view(
         toast_hit_area,
         pane_infos,
         split_borders,
+        note_hit_area: Rect::default(),
     };
     app.sync_copy_mode_search_geometry();
 }
@@ -423,6 +425,10 @@ pub fn render_with_runtime_registry(
     // Ambient notifications sit above panes, but below interactive overlays.
     render_notifications(app, frame, terminal_area);
     render_popup_pane(app, terminal_runtimes, frame, terminal_area);
+    // Note popup renders on top of the terminal popup (highest z-index).
+    if app.note_popup_active {
+        self::panes::render_note_popup(app, frame);
+    }
 
     match app.mode {
         Mode::Onboarding => render_onboarding_overlay(app, frame, frame.area()),

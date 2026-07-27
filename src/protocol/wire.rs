@@ -286,7 +286,8 @@ impl ClientInputEvent {
                     code.to_crossterm(),
                     crossterm::event::KeyModifiers::from_bits_truncate(*modifiers),
                 )
-                .with_kind(kind.to_crossterm()),
+                .with_kind(kind.to_crossterm())
+                .augment_enter_shift(),
             ),
             Self::Text { codepoint } => crate::raw_input::RawInputEvent::Key(
                 crate::input::TerminalKey::new(
