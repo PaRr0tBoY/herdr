@@ -3403,7 +3403,7 @@ impl AppState {
 // Tests
 // ---------------------------------------------------------------------------
 
-/// Sync tab names from agent OSC titles for OMP and Claude Code.
+/// Sync tab names from agent OSC titles for any detected agent.
 pub(crate) fn sync_tab_agent_names(
     workspaces: &mut [crate::workspace::Workspace],
     terminals: &std::collections::HashMap<
@@ -3412,8 +3412,6 @@ pub(crate) fn sync_tab_agent_names(
     >,
     terminal_runtimes: &crate::terminal::TerminalRuntimeRegistry,
 ) -> bool {
-    let synced: &[crate::detect::Agent] =
-        &[crate::detect::Agent::Omp, crate::detect::Agent::Claude];
     let mut changed = false;
     for ws in workspaces {
         for tab in &mut ws.tabs {
@@ -3425,15 +3423,14 @@ pub(crate) fn sync_tab_agent_names(
                 let Some(t) = terminals.get(&pane.attached_terminal_id) else {
                     continue;
                 };
-                let matches = t
-                    .agent_name
-                    .as_deref()
-                    .is_some_and(|n| synced.iter().any(|a| crate::detect::agent_label(*a) == n));
-                if !matches {
+                // Sync tab title from any detected agent, not just OMP/Claude.
+                if !t.is_agent_terminal() {
                     continue;
                 }
                 if let Some(rt) = terminal_runtimes.get(&pane.attached_terminal_id) {
-                    let title = rt.agent_osc_title();
+                    let raw_title = rt.agent_osc_title();
+                    let title = crate::terminal::stripped_terminal_title(&raw_title)
+                        .unwrap_or(raw_title);
                     if !title.is_empty() && tab.synced_agent_name.as_deref() != Some(&title) {
                         new_title = Some(title);
                         break;

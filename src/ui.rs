@@ -1,7 +1,7 @@
 use ratatui::{
     layout::{Constraint, Layout, Rect},
     style::{Modifier, Style},
-    text::Span,
+    text::{Line, Span},
     Frame,
 };
 
@@ -495,8 +495,16 @@ fn render_new_tab_type_overlay(app: &AppState, frame: &mut Frame) {
             inner.width.saturating_sub(2),
             1,
         );
-        let text = format!(" {}  {}", i + 1, item.label);
-        frame.render_widget(Paragraph::new(text).fg(p.text), row);
+        let number = format!(" {}  ", i + 1);
+        let mut spans = vec![Span::styled(number, p.text)];
+        spans.push(Span::styled(item.label.as_str(), p.text));
+        if !item.detail.is_empty() {
+            spans.push(Span::styled(
+                format!("  {}", item.detail),
+                Style::default().fg(p.overlay0),
+            ));
+        }
+        frame.render_widget(Paragraph::new(Line::from(spans)), row);
     }
     let hint = Rect::new(inner.x + 1, inner.y + n, inner.width.saturating_sub(2), 1);
     frame.render_widget(
@@ -511,7 +519,7 @@ pub(super) fn new_tab_type_overlay_rect(app: &crate::app::AppState, area: Rect) 
     if n == 0 {
         return None;
     }
-    let width = 36u16;
+    let width = 42u16;
     let height = n + 3;
     let btn = app.view.new_tab_hit_area;
     let x = if btn.width > 0 {
