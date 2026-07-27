@@ -1420,6 +1420,7 @@ pub(crate) struct PaneFocusTarget {
 #[derive(Debug, Clone)]
 pub struct NewTabTypeItem {
     pub label: String,
+    pub detail: String,
     pub shell_override: Option<String>,
     pub argv_override: Option<Vec<String>>,
 }

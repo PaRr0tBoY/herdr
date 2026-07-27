@@ -2951,7 +2951,7 @@ mod tests {
                 .created_tab
                 .as_ref()
                 .map(|tab| tab.label.as_str()),
-            Some("main")
+            Some("1 main")
         );
         assert_eq!(
             move_result.created_tab.as_ref().map(|tab| tab.focused),
