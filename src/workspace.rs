@@ -196,6 +196,10 @@ pub struct Workspace {
     pub(crate) next_public_tab_number: usize,
     pub tabs: Vec<Tab>,
     pub active_tab: usize,
+    /// Remembered note popup size (width, height) in cells.
+    pub note_popup_size: Option<(u16, u16)>,
+    /// In-memory note buffer. Survives popup close without saving to file.
+    pub note_buffer: String,
     #[cfg(test)]
     pub(crate) test_runtimes: HashMap<PaneId, TerminalRuntime>,
 }
@@ -261,6 +265,8 @@ impl Workspace {
             next_public_tab_number: 2,
             tabs: vec![tab],
             active_tab: 0,
+            note_popup_size: None,
+            note_buffer: String::new(),
             #[cfg(test)]
             test_runtimes: HashMap::new(),
         }
@@ -449,6 +455,8 @@ impl Workspace {
                 next_public_tab_number: 2,
                 tabs: vec![tab],
                 active_tab: 0,
+                note_popup_size: None,
+                note_buffer: String::new(),
                 #[cfg(test)]
                 test_runtimes: HashMap::new(),
             },
@@ -475,11 +483,16 @@ impl Workspace {
 
     pub fn tab_display_name(&self, tab_idx: usize) -> Option<String> {
         let tab = self.tabs.get(tab_idx)?;
-        Some(
-            tab.custom_name
-                .clone()
-                .unwrap_or_else(|| (tab_idx + 1).to_string()),
-        )
+        let label = tab
+            .custom_name
+            .clone()
+            .or_else(|| tab.synced_agent_name.clone());
+        // Dynamic index-based numbering: closing a tab renumbers the rest.
+        let display_number = tab_idx + 1;
+        match label {
+            Some(name) if !name.is_empty() => Some(format!("{} {}", display_number, name)),
+            _ => Some(display_number.to_string()),
+        }
     }
 
     pub fn switch_tab(&mut self, idx: usize) {
@@ -1254,6 +1267,7 @@ impl Workspace {
         panes.insert(root_id, PaneState::new(terminal_id));
         let tab = Tab {
             custom_name: None,
+            synced_agent_name: None,
             number: 1,
             root_pane: root_id,
             layout,
@@ -1284,6 +1298,8 @@ impl Workspace {
             next_public_tab_number: 2,
             tabs: vec![tab],
             active_tab: 0,
+            note_popup_size: None,
+            note_buffer: String::new(),
             test_runtimes: HashMap::new(),
         }
     }
@@ -1310,6 +1326,7 @@ impl Workspace {
         panes.insert(root_id, PaneState::new(TerminalId::alloc()));
         let tab = Tab {
             custom_name: name.map(str::to_string),
+            synced_agent_name: None,
             number: self.next_public_tab_number,
             root_pane: root_id,
             layout,
@@ -1754,7 +1771,7 @@ mod tests {
         let labels: Vec<_> = (0..ws.tabs.len())
             .map(|tab_idx| ws.tab_display_name(tab_idx).unwrap())
             .collect();
-        assert_eq!(labels, vec!["foo", "2", "3"]);
+        assert_eq!(labels, vec!["1 foo", "2", "3"]);
         assert_eq!(ws.tabs[0].custom_name.as_deref(), Some("foo"));
         assert!(ws.tabs[1].custom_name.is_none());
         assert!(ws.tabs[2].custom_name.is_none());

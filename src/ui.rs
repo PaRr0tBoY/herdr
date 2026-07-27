@@ -309,6 +309,7 @@ fn compute_view_internal(
         tab_scroll_left_hit_area: tab_bar_view.scroll_left_hit_area,
         tab_scroll_right_hit_area: tab_bar_view.scroll_right_hit_area,
         new_tab_hit_area: tab_bar_view.new_tab_hit_area,
+        note_hit_area: tab_bar_view.note_hit_area,
         terminal_area,
         mobile_header_rect: Rect::default(),
         mobile_menu_hit_area: Rect::default(),
@@ -378,6 +379,7 @@ fn compute_mobile_view(
         toast_hit_area,
         pane_infos,
         split_borders,
+        note_hit_area: Rect::default(),
     };
     app.sync_copy_mode_search_geometry();
 }
@@ -423,6 +425,10 @@ pub fn render_with_runtime_registry(
     // Ambient notifications sit above panes, but below interactive overlays.
     render_notifications(app, frame, terminal_area);
     render_popup_pane(app, terminal_runtimes, frame, terminal_area);
+    // Note popup renders on top of the terminal popup (highest z-index).
+    if app.note_popup_active {
+        self::panes::render_note_popup(app, frame);
+    }
 
     match app.mode {
         Mode::Onboarding => render_onboarding_overlay(app, frame, frame.area()),
@@ -453,8 +459,74 @@ pub fn render_with_runtime_registry(
         Mode::GlobalMenu => render_global_launcher_menu(app, frame),
         Mode::KeybindHelp => render_keybind_help_overlay(app, frame),
         Mode::Navigator => render_navigator_overlay(app, terminal_runtimes, frame),
+        Mode::NewTabType => render_new_tab_type_overlay(app, frame),
         Mode::Terminal => {}
     }
+}
+
+fn render_new_tab_type_overlay(app: &AppState, frame: &mut Frame) {
+    use ratatui::layout::Rect;
+    use ratatui::style::{Style, Stylize};
+    use ratatui::widgets::{Block, Borders, Clear, Paragraph};
+
+    let items = &app.new_tab_type_items;
+    let n = items.len() as u16;
+    if n == 0 {
+        return;
+    }
+    let Some(overlay) = new_tab_type_overlay_rect(app, frame.area()) else {
+        return;
+    };
+
+    frame.render_widget(Clear, overlay);
+    let p = &app.palette;
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" New Tab ")
+        .bg(p.panel_bg)
+        .fg(p.text);
+    let inner = block.inner(overlay);
+    frame.render_widget(block, overlay);
+
+    for (i, item) in items.iter().enumerate() {
+        let row = Rect::new(
+            inner.x + 1,
+            inner.y + i as u16,
+            inner.width.saturating_sub(2),
+            1,
+        );
+        let text = format!(" {}  {}", i + 1, item.label);
+        frame.render_widget(Paragraph::new(text).fg(p.text), row);
+    }
+    let hint = Rect::new(inner.x + 1, inner.y + n, inner.width.saturating_sub(2), 1);
+    frame.render_widget(
+        Paragraph::new(" Esc cancel ").style(Style::default().fg(p.overlay0)),
+        hint,
+    );
+}
+
+/// Compute the overlay rect for the new-tab-type picker, anchored to the "+" button.
+pub(super) fn new_tab_type_overlay_rect(app: &crate::app::AppState, area: Rect) -> Option<Rect> {
+    let n = app.new_tab_type_items.len() as u16;
+    if n == 0 {
+        return None;
+    }
+    let width = 36u16;
+    let height = n + 3;
+    let btn = app.view.new_tab_hit_area;
+    let x = if btn.width > 0 {
+        // Align left edge with the "+" button.
+        btn.x.min(area.width.saturating_sub(width))
+    } else {
+        area.width.saturating_sub(width + 2)
+    };
+    let y = if btn.width > 0 { btn.y + btn.height } else { 0 };
+    Some(Rect::new(
+        x,
+        y,
+        width.min(area.width),
+        height.min(area.height),
+    ))
 }
 
 fn render_notifications(app: &AppState, frame: &mut Frame, terminal_area: Rect) {

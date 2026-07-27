@@ -443,9 +443,105 @@ pub(super) fn open_new_tab_dialog(state: &mut AppState) {
     state.requested_new_tab_name = None;
     state.pending_workspace_create_cwd = None;
     state.rename_pane_target = None;
-    state.name_input = next_new_tab_default_name(state);
-    state.name_input_replace_on_type = true;
+    state.name_input = String::new();
+    state.name_input_replace_on_type = false;
     state.mode = Mode::RenameTab;
+}
+
+fn discover_new_tab_types() -> Vec<crate::app::state::NewTabTypeItem> {
+    use crate::app::state::NewTabTypeItem;
+    let mut items = Vec::new();
+    // Shells
+    #[cfg(windows)]
+    {
+        if std::env::var_os("PATH")
+            .map(|p| std::env::split_paths(&p).any(|d| d.join("pwsh.exe").exists()))
+            .unwrap_or(false)
+        {
+            items.push(NewTabTypeItem {
+                label: "PowerShell 7".into(),
+                shell_override: Some("pwsh.exe".into()),
+                argv_override: None,
+            });
+        }
+        if std::env::var_os("PATH")
+            .map(|p| std::env::split_paths(&p).any(|d| d.join("powershell.exe").exists()))
+            .unwrap_or(false)
+        {
+            items.push(NewTabTypeItem {
+                label: "Windows PowerShell".into(),
+                shell_override: Some("powershell.exe".into()),
+                argv_override: None,
+            });
+        }
+        items.push(NewTabTypeItem {
+            label: "Command Prompt".into(),
+            shell_override: Some("cmd.exe".into()),
+            argv_override: None,
+        });
+        if std::env::var_os("PATH")
+            .map(|p| std::env::split_paths(&p).any(|d| d.join("wsl.exe").exists()))
+            .unwrap_or(false)
+        {
+            items.push(NewTabTypeItem {
+                label: "WSL".into(),
+                shell_override: Some("wsl.exe".into()),
+                argv_override: None,
+            });
+        }
+    }
+    #[cfg(unix)]
+    {
+        if let Ok(shell) = std::env::var("SHELL") {
+            if !shell.is_empty() {
+                items.push(NewTabTypeItem {
+                    label: format!("Shell ({})", shell),
+                    shell_override: Some(shell),
+                    argv_override: None,
+                });
+            }
+        }
+        for c in &["/bin/zsh", "/bin/bash", "/bin/fish", "/bin/sh"] {
+            if std::path::Path::new(c).exists() {
+                items.push(NewTabTypeItem {
+                    label: c.trim_start_matches("/bin/").to_string(),
+                    shell_override: Some(c.to_string()),
+                    argv_override: None,
+                });
+            }
+        }
+    }
+    // Agents
+    for (label, bin) in &[
+        ("Claude Code", "claude"),
+        ("OpenCode", "opencode"),
+        ("OMP", "omp"),
+        ("Aider", "aider"),
+        ("Gemini CLI", "gemini"),
+        ("Codex", "codex"),
+    ] {
+        let found = std::env::var_os("PATH")
+            .map(|p| {
+                std::env::split_paths(&p)
+                    .any(|d| d.join(bin).exists() || d.join(format!("{bin}.exe")).exists())
+            })
+            .unwrap_or(false);
+        if found {
+            items.push(NewTabTypeItem {
+                label: label.to_string(),
+                shell_override: None,
+                argv_override: Some(vec![bin.to_string()]),
+            });
+        }
+    }
+    items
+}
+
+pub(super) fn open_new_tab_type_picker(state: &mut AppState) {
+    state.new_tab_type_items = discover_new_tab_types();
+    state.selected_new_tab_type = None;
+    state.creating_new_tab = false;
+    state.mode = Mode::NewTabType;
 }
 
 pub(super) fn leave_modal(state: &mut AppState) {
@@ -1043,6 +1139,14 @@ impl App {
                 } else {
                     Some(new_name)
                 };
+                let (shell_override, command_override) =
+                    if let Some(idx) = self.state.selected_new_tab_type.take() {
+                        let item = &self.state.new_tab_type_items[idx];
+                        (item.shell_override.clone(), item.argv_override.clone())
+                    } else {
+                        (None, None)
+                    };
+                self.state.new_tab_type_items.clear();
                 self.runtime_tab_create(
                     "tui.tab.create_named",
                     crate::api::schema::TabCreateParams {
@@ -1050,6 +1154,8 @@ impl App {
                         cwd: None,
                         focus: true,
                         label,
+                        shell_override,
+                        command_override,
                         env: Default::default(),
                     },
                 );
@@ -2068,7 +2174,7 @@ mod tests {
         assert!(state.workspaces[0].tabs[0].custom_name.is_none());
 
         open_new_tab_dialog(&mut state);
-        assert_eq!(state.name_input, "2");
+        assert_eq!(state.name_input, "");
     }
 
     #[test]

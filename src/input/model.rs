@@ -50,6 +50,29 @@ impl TerminalKey {
     pub fn as_key_event(self) -> KeyEvent {
         KeyEvent::new_with_kind(self.code, self.modifiers, self.kind)
     }
+
+    /// On Windows, the console may strip SHIFT from Enter key events.
+    /// Check the physical SHIFT key state and restore the modifier.
+    #[cfg(windows)]
+    pub(crate) fn augment_enter_shift(mut self) -> Self {
+        use crossterm::event::KeyCode;
+        if self.code == KeyCode::Enter && self.modifiers.is_empty() {
+            extern "system" {
+                fn GetAsyncKeyState(vKey: i32) -> i16;
+            }
+            const VK_SHIFT: i32 = 0x10;
+            let shift_held = unsafe { GetAsyncKeyState(VK_SHIFT) } as u16 & 0x8000 != 0;
+            if shift_held {
+                self.modifiers = crossterm::event::KeyModifiers::SHIFT;
+            }
+        }
+        self
+    }
+
+    #[cfg(not(windows))]
+    pub(crate) fn augment_enter_shift(self) -> Self {
+        self
+    }
 }
 
 impl From<KeyEvent> for TerminalKey {

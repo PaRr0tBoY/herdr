@@ -19,7 +19,7 @@ use super::WheelRouting;
 use super::{
     modal::{
         apply_global_menu_action, confirm_close_cancel, global_menu_actions, leave_modal,
-        modal_action_from_buttons, open_global_menu, open_new_tab_dialog, ModalAction,
+        modal_action_from_buttons, open_global_menu, open_new_tab_type_picker, ModalAction,
     },
     settings::SettingsAction,
     ScrollbarClickTarget, TAB_DRAG_THRESHOLD, WORKSPACE_DRAG_THRESHOLD,
@@ -58,6 +58,7 @@ pub(super) enum MouseAction {
         menu: ContextMenuState,
         idx: usize,
     },
+    ToggleNotePopup,
 }
 
 enum MobileMouseResult {
@@ -170,6 +171,36 @@ impl AppState {
         }
 
         if self.mode == Mode::KeybindHelp {
+            return None;
+        }
+
+        if self.mode == Mode::NewTabType {
+            if matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left)) {
+                if let Some(overlay_rect) =
+                    crate::ui::new_tab_type_overlay_rect(self, self.screen_rect())
+                {
+                    let inner_x = overlay_rect.x + 1;
+                    let inner_y = overlay_rect.y + 1;
+                    let inner_w = overlay_rect.width.saturating_sub(2);
+                    let n = self.new_tab_type_items.len() as u16;
+                    if mouse.column >= inner_x
+                        && mouse.column < inner_x + inner_w
+                        && mouse.row >= inner_y
+                        && mouse.row < inner_y + n
+                    {
+                        let idx = (mouse.row - inner_y) as usize;
+                        if idx < self.new_tab_type_items.len() {
+                            self.selected_new_tab_type = Some(idx);
+                            super::modal::open_new_tab_dialog(self);
+                            return None;
+                        }
+                    }
+                }
+                // Click outside overlay: dismiss.
+                self.mode = Mode::Terminal;
+                self.selected_new_tab_type = None;
+                self.new_tab_type_items.clear();
+            }
             return None;
         }
 
@@ -500,13 +531,11 @@ impl AppState {
                     return None;
                 }
                 if self.on_new_tab_button(mouse.column, mouse.row) {
-                    if self.prompt_new_tab_name {
-                        open_new_tab_dialog(self);
-                    } else {
-                        self.request_new_tab = true;
-                        self.mode = Mode::Terminal;
-                    }
+                    open_new_tab_type_picker(self);
                     return None;
+                }
+                if self.on_note_button(mouse.column, mouse.row) {
+                    return Some(MouseAction::ToggleNotePopup);
                 }
 
                 if in_sidebar {
@@ -787,9 +816,23 @@ impl AppState {
                         DragTarget::SidebarSectionDivider => {
                             self.set_sidebar_section_split(mouse.row);
                         }
-                        DragTarget::ReleaseNotesScrollbar { .. }
+                       | DragTarget::ReleaseNotesScrollbar { .. }
                         | DragTarget::ProductAnnouncementScrollbar { .. }
-                        | DragTarget::KeybindHelpScrollbar { .. } => {}
+                        | DragTarget::KeybindHelpScrollbar { .. }
+                        | DragTarget::NoteTextSelect => {}
+                        DragTarget::NotePopupResize {
+                            start_rect,
+                            start_col,
+                            start_row,
+                        } => {
+                            self.handle_note_popup_resize_drag(
+                                mouse.column,
+                                mouse.row,
+                                *start_rect,
+                                *start_col,
+                                *start_row,
+                            );
+                        }
                     }
                 }
             }
@@ -1143,12 +1186,7 @@ impl AppState {
                 return MobileMouseResult::Action(MouseAction::FocusWorkspace { ws_idx });
             }
             Some(crate::ui::MobileSwitcherTarget::NewTab) => {
-                if self.prompt_new_tab_name {
-                    open_new_tab_dialog(self);
-                } else {
-                    self.request_new_tab = true;
-                    self.mode = Mode::Terminal;
-                }
+                open_new_tab_type_picker(self);
             }
             Some(crate::ui::MobileSwitcherTarget::Tab(tab_idx)) => {
                 self.mode = Mode::Terminal;
@@ -1339,6 +1377,15 @@ impl AppState {
 
     pub(super) fn on_new_tab_button(&self, col: u16, row: u16) -> bool {
         let area = self.view.new_tab_hit_area;
+        area.width > 0
+            && row >= area.y
+            && row < area.y + area.height
+            && col >= area.x
+            && col < area.x + area.width
+    }
+
+    pub(super) fn on_note_button(&self, col: u16, row: u16) -> bool {
+        let area = self.view.note_hit_area;
         area.width > 0
             && row >= area.y
             && row < area.y + area.height
@@ -3799,6 +3846,7 @@ mod tests {
             switch.x + 1,
             switch.y + 1,
         ));
+
         let viewport = crate::ui::mobile_switcher_areas(&app.state).viewport;
         app.handle_mouse(mouse(
             MouseEventKind::Down(MouseButton::Left),
@@ -3806,8 +3854,9 @@ mod tests {
             viewport.y + 5,
         ));
 
-        assert_eq!(app.state.mode, Mode::RenameTab);
-        assert!(app.state.creating_new_tab);
+        // NewTab now opens type picker instead of rename dialog.
+        assert_eq!(app.state.mode, Mode::NewTabType);
+        assert!(!app.state.new_tab_type_items.is_empty());
     }
 
     #[test]
@@ -3835,10 +3884,9 @@ mod tests {
             viewport.x + 2,
             viewport.y + 5,
         ));
-        assert_eq!(app.state.mode, Mode::Terminal);
-        assert!(!app.state.creating_new_tab);
-        assert!(app.state.request_new_tab);
-        assert!(app.state.requested_new_tab_name.is_none());
+        // Type picker opens regardless of prompt_new_tab_name.
+        assert_eq!(app.state.mode, Mode::NewTabType);
+        assert!(!app.state.new_tab_type_items.is_empty());
     }
 
     #[test]
@@ -3858,10 +3906,8 @@ mod tests {
             new_tab_area.y,
         ));
 
-        assert_eq!(app.state.mode, Mode::Terminal);
-        assert!(!app.state.creating_new_tab);
-        assert!(app.state.request_new_tab);
-        assert!(app.state.requested_new_tab_name.is_none());
+        assert_eq!(app.state.mode, Mode::NewTabType);
+        assert!(!app.state.new_tab_type_items.is_empty());
     }
 
     #[test]

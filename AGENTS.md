@@ -36,6 +36,38 @@ Examples:
 
 ## Development
 
+### Debugging server-side input issues
+
+When a feature works in monolithic mode (`cargo run -- --no-session`) but not in
+client/server mode (`cargo run`), the root cause is usually one of:
+
+1. **Mouse events in headless mode skip chrome.** `route_client_events_from`
+   only calls `handle_pane_mouse_only`, not the full mouse handler. Tab bar
+   clicks, note button clicks, and sidebar interactions need their own hit-test
+   branches in the `RawInputEvent::Mouse` arm.
+2. **Windows clipboard requires a window handle.** `GetConsoleWindow()` returns
+   NULL in headless server processes. Pass `NULL` to `OpenClipboard` instead;
+   it uses the current task's implicit window.
+3. **Debug builds use `herdr-dev` config directory.** Logs, session files, and
+   note files go to `%APPDATA%/herdr-dev/` (not `herdr/`). Check
+   `src/config/io.rs::app_dir_name()` for the current mapping.
+
+**Effective input debugging process:**
+
+1. Add `tracing::info!` at the **highest event entry point** (e.g. right after
+   `coalesce_bracketed_paste` in `route_client_events_from`, logging every
+   `Key`/`Mouse`/`Paste` event with `code`, `kind`, `note_active`, `mode`).
+2. Use `info!` level, never `debug!` — default log level is INFO.
+3. Build and run. Reproduce the issue.
+4. Grep the log for the prefix. The log will show exactly what events arrived
+   and what state they saw.
+5. Remove verbose logging after the fix is confirmed.
+
+**Avoid:** theorizing about what events "should" arrive, writing state machines
+(like `coalesce_bracketed_paste`) before seeing the actual event stream,
+checking the wrong log file, assuming the user's actions didn't happen because
+the log is silent (check whether the handler even runs for that input path).
+
 ### Syncing upstream
 
 This fork tracks `upstream/master`. To pull in upstream changes:
@@ -119,6 +151,23 @@ If you need to patch the vendored terminal library (e.g., for Windows fixes):
 - Store patch files under `vendor/patches/libghostty-vt/`.
 - Each entry should say why the patch exists, the vendored base commit, and touched files.
 - When updating the vendored source from upstream, re-check every active patch.
+
+### TUI widget coordinate mapping
+
+When integrating third-party widgets with internal coordinate systems
+(e.g. ratatui-textarea's screen↔data mapping, scroll offsets):
+
+- **Never use scroll/viewport state as positioning input.** Scroll offsets are
+  render outputs. Computing cursor position from them creates a feedback loop
+  where the cursor changes the scroll, which changes the cursor position.
+  Symptom: repeated identical input alternates between two wrong results.
+- **Screen columns ≠ character count.** CJK characters occupy 2 display
+  columns. Forward/Back navigation moves by grapheme clusters, not screen
+  columns. Map through `unicode_width::UnicodeWidthChar` for conversions.
+- **Use stable post-render anchors.** `widget.cursor()` +
+  `widget.screen_cursor()` form a (data, screen) pair from the previous frame.
+  Compute target data coordinates from this anchor, then apply with a single
+  atomic `Jump`.
 
 ### Local planning
 
