@@ -23,8 +23,10 @@ use std::time::{Duration, Instant};
 use interprocess::local_socket::traits::Stream as _;
 use serde::{Deserialize, Deserializer};
 
-const STABLE_UPDATE_MANIFEST_URL: &str = "https://herdr.dev/latest.json";
-const PREVIEW_UPDATE_MANIFEST_URL: &str = "https://herdr.dev/preview.json";
+const STABLE_UPDATE_MANIFEST_URL: &str =
+    "https://api.github.com/repos/PaRr0tBoY/herdr/releases/latest";
+const PREVIEW_UPDATE_MANIFEST_URL: &str =
+    "https://api.github.com/repos/PaRr0tBoY/herdr/releases/latest";
 const HOMEBREW_FORMULA_API_URL: &str = "https://formulae.brew.sh/api/formula/herdr.json";
 const HERDR_UPDATE_COMMAND: &str = "herdr update";
 const HOMEBREW_UPDATE_COMMAND: &str = "brew update && brew upgrade herdr";
@@ -639,7 +641,7 @@ fn install_windows_update_with_installer(
             "-ExecutionPolicy",
             "Bypass",
             "-Command",
-            "irm https://herdr.dev/install.ps1 | iex",
+            "irm https://raw.githubusercontent.com/PaRr0tBoY/herdr/master/install.ps1 | iex",
         ])
         .env("HERDR_CHANNEL", channel.as_str())
         // Drop any inherited PSModulePath. When herdr is launched from
