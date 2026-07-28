@@ -1690,26 +1690,11 @@ fn is_key_press(
     ev: Option<&crate::raw_input::RawInputEvent>,
     code: crossterm::event::KeyCode,
 ) -> bool {
-    match ev {
-        Some(crate::raw_input::RawInputEvent::Key(k))
-            if k.kind == crossterm::event::KeyEventKind::Press && k.code == code =>
-        {
-            true
-        }
-        _ => false,
-    }
+    matches!(ev, Some(crate::raw_input::RawInputEvent::Key(k)) if k.kind == crossterm::event::KeyEventKind::Press && k.code == code)
 }
 
 fn is_key_char(ev: Option<&crate::raw_input::RawInputEvent>, ch: char) -> bool {
-    match ev {
-        Some(crate::raw_input::RawInputEvent::Key(k))
-            if k.kind == crossterm::event::KeyEventKind::Press
-                && k.code == crossterm::event::KeyCode::Char(ch) =>
-        {
-            true
-        }
-        _ => false,
-    }
+    matches!(ev, Some(crate::raw_input::RawInputEvent::Key(k)) if k.kind == crossterm::event::KeyEventKind::Press && k.code == crossterm::event::KeyCode::Char(ch))
 }
 
 // ---------------------------------------------------------------------------
