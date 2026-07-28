@@ -15,7 +15,6 @@ from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_METADATA = PROJECT_ROOT / "packaging" / "windows" / "conpty.json"
-MARKER_PATH = PurePosixPath("conpty/herdr-conpty.json")
 DOWNLOAD_TIMEOUT_SECONDS = 60
 
 
@@ -103,7 +102,7 @@ def stage_bundle(
     metadata_path: Path,
     architecture: str,
     package_path: Path,
-    herdr_exe: Path,
+    hive_exe: Path,
     output_dir: Path,
 ) -> None:
     metadata = load_metadata(metadata_path)
@@ -111,20 +110,20 @@ def stage_bundle(
         raise ValueError(f"unsupported Windows architecture: {architecture}")
     if output_dir.exists():
         raise ValueError(f"output directory already exists: {output_dir}")
-    if not herdr_exe.is_file():
-        raise ValueError(f"Herdr executable does not exist: {herdr_exe}")
+    if not hive_exe.is_file():
+        raise ValueError(f"Hive executable does not exist: {hive_exe}")
 
     acquire_package(metadata["package"], package_path)
     bundle = metadata["bundles"][architecture]
     metadata_root = metadata_path.resolve().parent
 
     with zipfile.ZipFile(package_path) as archive, tempfile.TemporaryDirectory(
-        prefix="herdr-conpty-stage-", dir=output_dir.parent
+        prefix="hive-conpty-stage-", dir=output_dir.parent
     ) as temporary:
-        validate_nuspec(archive, metadata["package"])
         staging = Path(temporary) / "bundle"
         staging.mkdir()
-        shutil.copy2(herdr_exe, staging / "herdr.exe")
+        shutil.copy2(hive_exe, staging / "hive.exe")
+        validate_nuspec(archive, metadata["package"])
 
         for item in bundle["files"]:
             try:
@@ -166,7 +165,7 @@ def stage_bundle(
 
 
 def expected_stage_files(metadata: dict[str, Any], architecture: str) -> set[str]:
-    files = {"herdr.exe", MARKER_PATH.as_posix()}
+    files = {"hive.exe", MARKER_PATH.as_posix()}
     files.update(item["destination"] for item in metadata["bundles"][architecture]["files"])
     files.update(item["destination"] for item in metadata["notices"])
     return files
@@ -217,7 +216,7 @@ def parse_args() -> argparse.Namespace:
     stage = subparsers.add_parser("stage")
     stage.add_argument("--architecture", choices=("x86_64",), default="x86_64")
     stage.add_argument("--package", type=Path, required=True)
-    stage.add_argument("--herdr-exe", type=Path, required=True)
+    stage.add_argument("--hive-exe", type=Path, required=True)
     stage.add_argument("--output-dir", type=Path, required=True)
 
     archive = subparsers.add_parser("archive")

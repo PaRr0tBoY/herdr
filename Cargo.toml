@@ -1,12 +1,12 @@
 [package]
-name = "herdr"
-version = "0.7.5"
+name = "hive"
+version = "2026.7.28"
 edition = "2021"
 build = "build.rs"
 description = "terminal workspace manager for AI coding agents"
 license = "Apache-2.0"
-repository = "https://github.com/ogulcancelik/herdr"
-homepage = "https://herdr.dev"
+repository = "https://github.com/PaRr0tBoY/herdr"
+homepage = "https://github.com/PaRr0tBoY/herdr"
 keywords = ["terminal", "tui", "ai", "agents", "multiplexer"]
 categories = ["command-line-utilities"]
 include = [
@@ -17,6 +17,10 @@ include = [
     "LICENSE",
     "Cargo.toml",
 ]
+
+[[bin]]
+name = "hive"
+path = "src/main.rs"
 
 [dependencies]
 base64 = "0.22.1"

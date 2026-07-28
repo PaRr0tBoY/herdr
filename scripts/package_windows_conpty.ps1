@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$HerdrExe,
+    [string]$HiveExe,
 
     [Parameter(Mandatory = $true)]
     [string]$PackagePath,
@@ -32,7 +32,7 @@ Invoke-NativeChecked python @(
     $packager,
     "stage",
     "--package", $PackagePath,
-    "--herdr-exe", $HerdrExe,
+    "--hive-exe", $HiveExe,
     "--output-dir", $StageDir
 )
 Invoke-NativeChecked dotnet @("nuget", "verify", "--all", $PackagePath)
