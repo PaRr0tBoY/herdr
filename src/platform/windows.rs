@@ -1327,7 +1327,7 @@ mod tests {
     }
 
     fn argv_strings(argv: &[std::ffi::OsString]) -> Vec<String> {
-        argv.into_iter()
+        argv.iter()
             .map(|arg| arg.to_string_lossy().into_owned())
             .collect()
     }

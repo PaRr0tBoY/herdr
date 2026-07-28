@@ -1647,18 +1647,15 @@ impl App {
                     found_end = true;
                     break;
                 }
-                match &events[j] {
-                    crate::raw_input::RawInputEvent::Key(k) => match k.code {
-                        KeyCode::Char(c) => {
-                            let mut buf = [0u8; 4];
-                            paste.extend_from_slice(c.encode_utf8(&mut buf).as_bytes());
-                        }
-                        KeyCode::Enter => paste.push(b'\n'),
-                        KeyCode::Tab => paste.push(b'\t'),
-                        _ => {}
-                    },
+                if let crate::raw_input::RawInputEvent::Key(k) = &events[j] { match k.code {
+                    KeyCode::Char(c) => {
+                        let mut buf = [0u8; 4];
+                        paste.extend_from_slice(c.encode_utf8(&mut buf).as_bytes());
+                    }
+                    KeyCode::Enter => paste.push(b'\n'),
+                    KeyCode::Tab => paste.push(b'\t'),
                     _ => {}
-                }
+                } }
                 j += 1;
             }
             if found_end {

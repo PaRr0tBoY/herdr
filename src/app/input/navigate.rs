@@ -187,7 +187,7 @@ impl App {
                 self.state.selected_new_tab_type = None;
                 self.state.new_tab_type_items.clear();
             }
-            KeyCode::Char(c) if c >= '1' && c <= '9' => {
+            KeyCode::Char(c) if ('1'..='9').contains(&c) => {
                 let idx = (c as u8 - b'1') as usize;
                 if idx < self.state.new_tab_type_items.len() {
                     self.state.selected_new_tab_type = Some(idx);
