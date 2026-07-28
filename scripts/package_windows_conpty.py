@@ -233,7 +233,7 @@ def main() -> None:
             args.metadata,
             args.architecture,
             args.package,
-            args.herdr_exe,
+            args.hive_exe,
             args.output_dir,
         )
     else:
