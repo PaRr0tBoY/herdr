@@ -1,7 +1,7 @@
 //! Thin client mode — connects to the server's client socket.
 //!
 //! The client:
-//! - Connects to `herdr-client.sock`, sends Hello with terminal size and protocol version
+//! - Connects to `hive-client.sock`, sends Hello with terminal size and protocol version
 //! - Sets up the real terminal (raw mode, mouse capture, keyboard enhancements)
 //! - Receives Frame messages and blits them to the terminal (diff against last frame)
 //! - Reads stdin events (keystrokes, mouse, paste) and sends them as ClientMessage::Input
@@ -528,7 +528,7 @@ fn enable_windows_virtual_terminal_input() -> WindowsVirtualTerminalInputSetup {
 
 #[cfg(windows)]
 fn windows_vti_input_backend_enabled() -> bool {
-    std::env::var("HERDR_WINDOWS_INPUT_BACKEND")
+    std::env::var("HIVE_WINDOWS_INPUT_BACKEND")
         .map(|backend| !backend.eq_ignore_ascii_case("crossterm"))
         .unwrap_or(false)
 }
@@ -628,7 +628,7 @@ fn pop_keyboard_enhancement_flags() -> io::Result<()> {
 
 #[cfg(windows)]
 fn windows_win32_input_mode_enabled() -> bool {
-    std::env::var("HERDR_WINDOWS_INPUT_PROBE")
+    std::env::var("HIVE_WINDOWS_INPUT_PROBE")
         .map(|probe| probe.eq_ignore_ascii_case("win32"))
         .unwrap_or(true)
 }
@@ -661,7 +661,7 @@ impl Drop for TerminalGuard {
 // ---------------------------------------------------------------------------
 
 fn requested_render_encoding() -> RenderEncoding {
-    match std::env::var("HERDR_RENDER_ENCODING").ok().as_deref() {
+    match std::env::var("HIVE_RENDER_ENCODING").ok().as_deref() {
         Some("terminal-ansi" | "terminal_ansi" | "ansi") => RenderEncoding::TerminalAnsi,
         _ => RenderEncoding::SemanticFrame,
     }
@@ -675,7 +675,7 @@ fn is_remote_client_process() -> bool {
 /// Time to wait for the server's Welcome reply during the handshake.
 ///
 /// A local client talks to an already-connected server, so 5s is plenty. The
-/// remote bridge client (`herdr --remote`) sits behind a fresh per-attach ssh
+/// remote bridge client (`hive --remote`) sits behind a fresh per-attach ssh
 /// connection whose cold-connect (TCP + key exchange + auth) happens inside this
 /// window; on a high-latency link that easily exceeds 5s, so it gets a far
 /// larger budget. See issue #753.
@@ -1972,7 +1972,7 @@ fn forward_clipboard(data: &str) {
 }
 
 fn window_title_osc(title: Option<&str>) -> Vec<u8> {
-    let title = title.unwrap_or("herdr");
+    let title = title.unwrap_or("Hive");
     let safe_title = title
         .chars()
         .filter(|ch| !matches!(*ch, '\u{1b}' | '\u{7}' | '\u{9c}'))
@@ -2165,7 +2165,7 @@ fn write_host_terminal_theme_query(mut writer: impl io::Write) -> io::Result<()>
 }
 
 fn init_logging() {
-    crate::logging::init_file_logging("herdr-client.log");
+    crate::logging::init_file_logging("hive-client.log");
 }
 
 // ---------------------------------------------------------------------------

@@ -561,7 +561,7 @@ impl App {
                         textarea.cancel_selection();
                         let target_sr = mouse.row.saturating_sub(text_area.y);
                         let target_sc = mouse.column.saturating_sub(text_area.x);
-                Self::move_textarea_cursor_to_screen(textarea, target_sr, target_sc);
+                        Self::move_textarea_cursor_to_screen(textarea, target_sr, target_sc);
                         self.state.drag = Some(crate::app::state::DragState {
                             target: crate::app::state::DragTarget::NoteTextSelect,
                         });
@@ -587,8 +587,7 @@ impl App {
                         );
                     }
                     Some(crate::app::state::DragState {
-                        target:
-                            crate::app::state::DragTarget::NoteTextSelect,
+                        target: crate::app::state::DragTarget::NoteTextSelect,
                     }) => {
                         if let Some(textarea) = &mut self.state.note_textarea {
                             if !textarea.is_selecting() {
@@ -616,12 +615,10 @@ impl App {
                             let yanked = textarea.yank_text();
                             textarea.cancel_selection();
                             if !yanked.is_empty() {
-                                self.state.request_clipboard_write =
-                                    Some(yanked.into_bytes());
-                                self.state.copy_feedback =
-                                    Some(crate::app::state::CopyFeedback {
-                                        message: "copied to clipboard".to_string(),
-                                    });
+                                self.state.request_clipboard_write = Some(yanked.into_bytes());
+                                self.state.copy_feedback = Some(crate::app::state::CopyFeedback {
+                                    message: "copied to clipboard".to_string(),
+                                });
                                 self.copy_feedback_deadline =
                                     Some(std::time::Instant::now() + super::COPY_FEEDBACK_DURATION);
                                 self.dispatch_pending_clipboard_write();
@@ -660,7 +657,7 @@ impl App {
         };
         for _ in 0..(d_row.unsigned_abs() as usize).min(500) {
             textarea.move_cursor(row_mover);
-    }
+        }
 
         // Phase 2: Column via display-width-aware mapping.
         // Forward/Back move by grapheme clusters, not screen columns,
@@ -700,12 +697,10 @@ impl App {
                     i
                 };
                 break;
-    }
+            }
             acc += w;
             target_col = i + 1;
-    }
-
-
+        }
 
         textarea.move_cursor(CursorMove::Jump(data.0 as u16, target_col as u16));
     }

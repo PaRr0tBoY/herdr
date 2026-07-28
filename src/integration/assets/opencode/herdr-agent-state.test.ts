@@ -43,9 +43,9 @@ beforeEach(() => {
   clients.length = 0;
   requestWaiters.length = 0;
   autoAcknowledge = true;
-  process.env.HERDR_ENV = "1";
-  process.env.HERDR_SOCKET_PATH = "test.sock";
-  process.env.HERDR_PANE_ID = "test:p1";
+  process.env.HIVE_ENV = "1";
+  process.env.HIVE_SOCKET_PATH = "test.sock";
+  process.env.HIVE_PANE_ID = "test:p1";
 });
 
 async function loadPlugin() {

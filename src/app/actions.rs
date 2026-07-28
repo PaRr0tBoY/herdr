@@ -3526,8 +3526,8 @@ pub(crate) fn sync_tab_agent_names(
                 }
                 if let Some(rt) = terminal_runtimes.get(&pane.attached_terminal_id) {
                     let raw_title = rt.agent_osc_title();
-                    let title = crate::terminal::stripped_terminal_title(&raw_title)
-                        .unwrap_or(raw_title);
+                    let title =
+                        crate::terminal::stripped_terminal_title(&raw_title).unwrap_or(raw_title);
                     if !title.is_empty() && tab.synced_agent_name.as_deref() != Some(&title) {
                         new_title = Some(title);
                         break;

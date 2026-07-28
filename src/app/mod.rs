@@ -1663,14 +1663,14 @@ impl App {
             }
             if found_end {
                 let text = String::from_utf8_lossy(&paste).into_owned();
-                tracing::debug!(len = text.len(), "bracketed paste: coalesced from key events");
+                tracing::debug!(
+                    len = text.len(),
+                    "bracketed paste: coalesced from key events"
+                );
                 // Drain from i to j + 6 and insert one Paste event.
                 let drain_end = j + 6;
                 events.drain(i..drain_end);
-                events.insert(
-                    i,
-                    crate::raw_input::RawInputEvent::Paste(text),
-                );
+                events.insert(i, crate::raw_input::RawInputEvent::Paste(text));
                 i += 1;
             } else {
                 // No end marker found: drain the incomplete sequence.
@@ -1686,7 +1686,10 @@ impl App {
 // Input routing for headless server mode
 // ---------------------------------------------------------------------------
 
-fn is_key_press(ev: Option<&crate::raw_input::RawInputEvent>, code: crossterm::event::KeyCode) -> bool {
+fn is_key_press(
+    ev: Option<&crate::raw_input::RawInputEvent>,
+    code: crossterm::event::KeyCode,
+) -> bool {
     match ev {
         Some(crate::raw_input::RawInputEvent::Key(k))
             if k.kind == crossterm::event::KeyEventKind::Press && k.code == code =>
@@ -1886,45 +1889,53 @@ impl App {
     fn handle_non_terminal_key_headless(&mut self, key: crate::input::TerminalKey) {
         if self.state.note_popup_active {
             // Ctrl+S: save note to file.
-            if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL)
+            if key
+                .modifiers
+                .contains(crossterm::event::KeyModifiers::CONTROL)
                 && key.code == crossterm::event::KeyCode::Char('s')
             {
                 self.state.save_note_to_file();
-            return;
+                return;
             }
             // Ctrl+V: paste from clipboard.
-            if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL)
+            if key
+                .modifiers
+                .contains(crossterm::event::KeyModifiers::CONTROL)
                 && key.code == crossterm::event::KeyCode::Char('v')
             {
                 if let Some(text) = crate::platform::read_clipboard_text() {
                     if let Some(textarea) = &mut self.state.note_textarea {
                         textarea.insert_str(&text);
                         self.state.save_note_to_file();
-            }
-            }
-            return;
+                    }
+                }
+                return;
             }
             if key.code == crossterm::event::KeyCode::Esc {
                 // Esc is a no-op; see note in input/mod.rs.
-            return;
+                return;
             }
             // Ctrl+Z: undo.
-            if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL)
+            if key
+                .modifiers
+                .contains(crossterm::event::KeyModifiers::CONTROL)
                 && key.code == crossterm::event::KeyCode::Char('z')
             {
                 if let Some(textarea) = &mut self.state.note_textarea {
                     textarea.undo();
-            }
-            return;
+                }
+                return;
             }
             // Ctrl+Y: redo.
-            if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL)
+            if key
+                .modifiers
+                .contains(crossterm::event::KeyModifiers::CONTROL)
                 && key.code == crossterm::event::KeyCode::Char('y')
             {
                 if let Some(textarea) = &mut self.state.note_textarea {
                     textarea.redo();
-            }
-            return;
+                }
+                return;
             }
             // Forward character input to the textarea.
             if let Some(textarea) = &mut self.state.note_textarea {

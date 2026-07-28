@@ -1,21 +1,21 @@
 // installed by herdr
 // managed by herdr; reinstalling or updating the integration overwrites this file.
 // add custom hooks/plugins beside this file instead of editing it.
-// HERDR_INTEGRATION_ID=omp
-// HERDR_INTEGRATION_VERSION=7
+// HIVE_INTEGRATION_ID=omp
+// HIVE_INTEGRATION_VERSION=7
 // @ts-nocheck
 
 import net from "node:net";
 
-const HERDR_ENV = process.env.HERDR_ENV;
-const socketPath = process.env.HERDR_SOCKET_PATH;
+const HIVE_ENV = process.env.HIVE_ENV;
+const socketPath = process.env.HIVE_SOCKET_PATH;
 const socketEndpoint =
   process.platform === "win32" && socketPath ? `\\\\.\\pipe\\${socketPath}` : socketPath;
-const paneId = process.env.HERDR_PANE_ID;
-const source = "herdr:omp";
+const paneId = process.env.HIVE_PANE_ID;
+const source = "hive:omp";
 
 function enabled() {
-  return HERDR_ENV === "1" && !!socketPath && !!paneId;
+  return HIVE_ENV === "1" && !!socketPath && !!paneId;
 }
 
 let requestQueue = Promise.resolve();
@@ -71,8 +71,8 @@ type QueuedState = {
   seq: number;
 };
 
-const idleDebounceMs = parseDurationEnv("HERDR_OMP_IDLE_DEBOUNCE_MS", 250);
-const retryGraceMs = parseDurationEnv("HERDR_OMP_RETRY_GRACE_MS", 2500);
+const idleDebounceMs = parseDurationEnv("HIVE_OMP_IDLE_DEBOUNCE_MS", 250);
+const retryGraceMs = parseDurationEnv("HIVE_OMP_RETRY_GRACE_MS", 2500);
 const retryableErrorPattern =
   /overloaded|provider.?returned.?error|rate.?limit|too many requests|429|500|502|503|504|service.?unavailable|server.?error|internal.?error|network.?error|connection.?error|connection.?refused|connection.?lost|websocket.?closed|websocket.?error|other side closed|fetch failed|upstream.?connect|reset before headers|socket hang up|ended without|http2 request did not get a response|timed? out|timeout|terminated|retry delay/i;
 let reportSeq = Date.now() * 1000;
@@ -298,55 +298,20 @@ export default function (pi) {
       publishState();
     }, idleDebounceMs);
     idleTimer.unref?.();
+
+    publishState();
   }
 
-  function holdForRetry(message: string) {
-    clearPendingTimers();
-    retryHoldActive = true;
-    failureBlocked = false;
-    failureMessage = message;
-    publishState();
-
+  function scheduleRetryHold() {
+    clearTimer(retryTimer);
     retryTimer = setTimeout(() => {
       retryTimer = undefined;
-      retryHoldActive = false;
-      failureBlocked = true;
-      publishState();
+      if (retryHoldActive) {
+        retryHoldActive = false;
+        publishState();
+      }
     }, retryGraceMs);
     retryTimer.unref?.();
-  }
-
-  function activateRootSession(ctx: any, sessionStartSource = "startup"): boolean {
-    if (ctx?.hasUI !== true) {
-      return false;
-    }
-    rootSession = true;
-    updateSessionRef(ctx);
-    void reportSession(sessionStartSource);
-    return true;
-  }
-
-  function resetSessionState() {
-    clearPendingTimers();
-    clearFailureState();
-    agentActive = false;
-    blockedCount = 0;
-    blockedMessage = undefined;
-  }
-
-  function activateBlocked(message: string | undefined) {
-    clearPendingTimers();
-    blockedCount += 1;
-    blockedMessage = message;
-    publishState();
-  }
-
-  function deactivateBlocked() {
-    blockedCount = Math.max(0, blockedCount - 1);
-    if (blockedCount === 0) {
-      blockedMessage = undefined;
-    }
-    publishState();
   }
 
   pi.events.on("herdr:blocked", (data) => {
@@ -354,102 +319,92 @@ export default function (pi) {
       return;
     }
     if (!data?.active) {
-      deactivateBlocked();
+      blockedCount = Math.max(0, blockedCount - 1);
+      if (blockedCount === 0) {
+        blockedMessage = undefined;
+      }
+      publishState();
       return;
     }
 
-    activateBlocked(data.label);
+    blockedCount += 1;
+    blockedMessage = data.label;
+    publishState();
   });
 
-  pi.on("session_start", (_event, ctx) => {
-    if (!activateRootSession(ctx)) {
+  pi.on("session_start", async (event, ctx) => {
+    if (ctx?.hasUI !== true) {
       return;
     }
+    rootSession = true;
+    updateSessionRef(ctx);
+    await reportSession(event?.reason);
     // A reload can replace this extension mid-run without emitting another agent_start.
     agentActive = ctx?.isIdle?.() === false;
     publishState(true);
   });
 
-  pi.on("session_switch", (event, ctx) => {
-    if (!activateRootSession(ctx, event?.reason || "resume")) {
-      return;
-    }
-    resetSessionState();
-    publishState(true);
-  });
-
   pi.on("agent_start", (_event, ctx) => {
-    if (!rootSession && !activateRootSession(ctx)) {
+    if (!rootSession) {
       return;
     }
     updateSessionRef(ctx);
     void reportSession();
-    clearPendingTimers();
-    clearFailureState();
     agentActive = true;
+    clearFailureState();
     publishState();
   });
 
-  pi.on("tool_approval_requested", (event, ctx) => {
-    if (!rootSession && !activateRootSession(ctx)) {
-      return;
-    }
-    const label = event?.reason || `${event?.toolName || "Tool"} approval`;
-    activateBlocked(label);
-  });
-
-  pi.on("tool_approval_resolved", (_event, ctx) => {
-    if (!rootSession && !activateRootSession(ctx)) {
-      return;
-    }
-    deactivateBlocked();
-  });
-
-  pi.on("tool_execution_start", (event, ctx) => {
-    if (event?.toolName !== "ask") {
-      return;
-    }
-    if (!rootSession && !activateRootSession(ctx)) {
-      return;
-    }
-    activateBlocked(askBlockedMessage(event.args));
-  });
-
-  pi.on("tool_execution_end", (event, ctx) => {
-    if (event?.toolName !== "ask") {
-      return;
-    }
-    if (!rootSession && !activateRootSession(ctx)) {
-      return;
-    }
-    deactivateBlocked();
-  });
-
-  pi.on("agent_end", (event) => {
+  pi.on("agent_settled", (_event, ctx) => {
     if (!rootSession) {
       return;
     }
-    if (!agentActive) {
-      // OMP can emit duplicate/late end events while auto-retry is already
-      // holding the pane in Working. Do not let an unqualified duplicate end
-      // cancel the retry hold and publish a false Idle.
+    if (ctx?.isIdle?.() !== true) {
       return;
     }
 
     agentActive = false;
 
-    const retryableMessage = retryableErrorMessage(event);
-    if (retryableMessage) {
-      holdForRetry(retryableMessage);
+    // If we're inside a retry hold, keep working until the grace timer
+    // expires so the pane doesn't flash idle between retries.
+    if (retryHoldActive) {
       return;
     }
 
-    scheduleIdle();
+    publishState();
   });
 
-  pi.on("session_shutdown", () => {
-    if (rootSession) {
-      clearPendingTimers();
+  pi.on("agent_error", (event, ctx) => {
+    if (!rootSession) {
+      return;
     }
+
+    const errorMessage = retryableErrorMessage(event);
+    if (!errorMessage) {
+      return;
+    }
+
+    // Enter a retry hold to keep the pane in working state for a grace
+    // period. The hold is released either when the retry grace timer
+    // expires or when the next agent_start arrives (whichever comes
+    // first). If the error persists after the grace window, the pane
+    // will transition to blocked.
+    retryHoldActive = true;
+    failureBlocked = true;
+    failureMessage = errorMessage;
+    clearPendingTimers();
+    scheduleRetryHold();
+    publishState();
+  });
+
+  pi.on("session_end", () => {
+    rootSession = false;
+    clearPendingTimers();
+    clearFailureState();
+    agentActive = false;
+    blockedCount = 0;
+    blockedMessage = undefined;
+    lastState = undefined;
+    lastMessage = undefined;
   });
 }

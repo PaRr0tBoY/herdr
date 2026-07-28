@@ -20,9 +20,9 @@ const KNOWN_TOP_LEVEL_CONFIG_KEYS: &[&str] = &[
 
 pub fn app_dir_name() -> &'static str {
     if cfg!(debug_assertions) {
-        "herdr-dev"
+        "hive-dev"
     } else {
-        "herdr"
+        "hive"
     }
 }
 
@@ -41,7 +41,7 @@ pub fn state_dir() -> PathBuf {
 }
 
 #[cfg(windows)]
-fn platform_config_dir() -> PathBuf {
+pub(crate) fn platform_config_dir() -> PathBuf {
     if let Ok(dir) = std::env::var("APPDATA") {
         return PathBuf::from(dir).join(app_dir_name());
     }
@@ -58,7 +58,7 @@ fn platform_config_dir() -> PathBuf {
 }
 
 #[cfg(not(windows))]
-fn platform_config_dir() -> PathBuf {
+pub(crate) fn platform_config_dir() -> PathBuf {
     if let Ok(home) = std::env::var("HOME") {
         PathBuf::from(home).join(format!(".config/{}", app_dir_name()))
     } else {

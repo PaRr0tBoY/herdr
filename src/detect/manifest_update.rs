@@ -15,7 +15,7 @@ use super::{agent_label, parse_agent_label, Agent};
 pub(crate) const MANIFEST_ENGINE_VERSION: u32 = 3;
 const DEFAULT_CATALOG_URL: &str =
     "https://raw.githubusercontent.com/PaRr0tBoY/herdr/master/agent-detection/index.toml";
-const CATALOG_URL_ENV: &str = "HERDR_AGENT_DETECTION_MANIFEST_CATALOG_URL";
+const CATALOG_URL_ENV: &str = "HIVE_AGENT_DETECTION_MANIFEST_CATALOG_URL";
 const MAX_FETCH_BYTES: usize = 256 * 1024;
 
 #[derive(Debug, Clone)]

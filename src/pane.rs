@@ -112,7 +112,7 @@ fn apply_pane_launch_env(cmd: &mut CommandBuilder, launch_env: &PaneLaunchEnv) {
     for (key, value) in &launch_env.extra {
         cmd.env(key, value);
     }
-    cmd.env(crate::HERDR_ENV_VAR, crate::HERDR_ENV_VALUE);
+    cmd.env(crate::HIVE_ENV_VAR, crate::HIVE_ENV_VALUE);
     crate::integration::apply_pane_base_env(cmd);
     // Re-apply proxy-related environment variables from the current process.
     // get_base_env() snapshots the process env first, then overlays HKCU\Environment
@@ -127,12 +127,12 @@ fn apply_pane_launch_env(cmd: &mut CommandBuilder, launch_env: &PaneLaunchEnv) {
             tab_id,
             pane_id,
         } => {
-            cmd.env(crate::integration::HERDR_WORKSPACE_ID_ENV_VAR, workspace_id);
-            cmd.env(crate::integration::HERDR_TAB_ID_ENV_VAR, tab_id);
-            cmd.env(crate::integration::HERDR_PANE_ID_ENV_VAR, pane_id);
+            cmd.env(crate::integration::HIVE_WORKSPACE_ID_ENV_VAR, workspace_id);
+            cmd.env(crate::integration::HIVE_TAB_ID_ENV_VAR, tab_id);
+            cmd.env(crate::integration::HIVE_PANE_ID_ENV_VAR, pane_id);
         }
         PaneLaunchIdentity::OmitPane => {
-            cmd.env_remove(crate::integration::HERDR_PANE_ID_ENV_VAR);
+            cmd.env_remove(crate::integration::HIVE_PANE_ID_ENV_VAR);
         }
     }
 }

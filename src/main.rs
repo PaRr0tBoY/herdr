@@ -8,9 +8,9 @@ use crossterm::event::{
 use crossterm::event::{PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags};
 use crossterm::execute;
 
-pub(crate) const HERDR_ENV_VAR: &str = "HERDR_ENV";
-pub(crate) const HERDR_ENV_VALUE: &str = "1";
-const NESTED_HERDR_MESSAGES: [&str; 6] = [
+pub(crate) const HIVE_ENV_VAR: &str = "HIVE_ENV";
+pub(crate) const HIVE_ENV_VALUE: &str = "1";
+const NESTED_HIVE_MESSAGES: [&str; 6] = [
     "inception detected. we need to go deeper... said no one ever.",
     "recursion is a pathway to many abilities some consider to be... unnatural.",
     "you were so preoccupied with whether you could, you didn't stop to think if you should. — dr. malcolm",
@@ -103,11 +103,11 @@ mod workspace;
 mod worktree;
 
 fn init_logging() {
-    crate::logging::init_file_logging("herdr.log");
+    crate::logging::init_file_logging("hive.log");
 }
 
-const DEFAULT_CONFIG: &str = r##"# herdr configuration
-# Place this file at ~/.config/herdr/config.toml
+const DEFAULT_CONFIG: &str = r##"# hive configuration
+# Place this file at ~/.config/hive/config.toml
 
 # Show first-run notification setup on startup.
 # Missing also shows onboarding; set false after you've chosen.
@@ -429,11 +429,11 @@ pane_history = false
 const SKILL: &str = include_str!("../SKILL.md");
 
 fn should_block_nested(config: &config::Config) -> bool {
-    should_block_nested_for_env(config, std::env::var(HERDR_ENV_VAR).ok().as_deref())
+    should_block_nested_for_env(config, std::env::var(HIVE_ENV_VAR).ok().as_deref())
 }
 
-fn should_block_nested_for_env(config: &config::Config, herdr_env: Option<&str>) -> bool {
-    !config.experimental.allow_nested && herdr_env == Some(HERDR_ENV_VALUE)
+fn should_block_nested_for_env(config: &config::Config, hive_env: Option<&str>) -> bool {
+    !config.experimental.allow_nested && hive_env == Some(HIVE_ENV_VALUE)
 }
 
 fn random_nested_message() -> &'static str {
@@ -443,8 +443,8 @@ fn random_nested_message() -> &'static str {
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.subsec_nanos() as usize)
         .unwrap_or(0);
-    let index = (nanos ^ (std::process::id() as usize)) % NESTED_HERDR_MESSAGES.len();
-    NESTED_HERDR_MESSAGES[index]
+    let index = (nanos ^ (std::process::id() as usize)) % NESTED_HIVE_MESSAGES.len();
+    NESTED_HIVE_MESSAGES[index]
 }
 
 fn exit_if_nested_disabled(config: &config::Config) {
@@ -586,27 +586,27 @@ fn main() -> io::Result<()> {
         println!();
         println!("Common commands:");
         for (command, description) in [
-            ("herdr", "Launch or attach to the persistent session"),
+            ("hive", "Launch or attach to the persistent session"),
             (
-                "herdr status [server|client]",
+                "hive status [server|client]",
                 "Show local client and running server status",
             ),
-            ("herdr update", "Download and install the latest version"),
-            ("herdr completion zsh", "Generate shell completions for zsh"),
+            ("hive update", "Download and install the latest version"),
+            ("hive completion zsh", "Generate shell completions for zsh"),
             (
-                "herdr server stop",
+                "hive server stop",
                 "Stop the running server via the API socket",
             ),
             (
-                "herdr channel set <stable|preview>",
+                "hive channel set <stable|preview>",
                 "Choose the stable or preview update channel",
             ),
             (
-                "herdr server reload-config",
+                "hive server reload-config",
                 "Reload config.toml in the running server",
             ),
             (
-                "herdr config reset-keys",
+                "hive config reset-keys",
                 "Back up config.toml and remove custom keybindings",
             ),
             (
@@ -667,7 +667,7 @@ fn main() -> io::Result<()> {
         println!();
         println!("Config: {}", config::config_path().display());
         println!("Logs:   {}", logging::help_log_paths_summary());
-        println!("Env:    HERDR_CONFIG_PATH overrides config file path");
+        println!("Env:    HIVE_CONFIG_PATH overrides config file path");
         println!("Home:   https://herdr.dev");
         println!("Skill:  herdr --skill prints agent instructions for driving herdr from a pane");
         return Ok(());
@@ -882,14 +882,14 @@ mod tests {
     #[test]
     fn nested_herdr_blocks_when_env_is_set() {
         let config = config::Config::default();
-        assert!(should_block_nested_for_env(&config, Some(HERDR_ENV_VALUE)));
+        assert!(should_block_nested_for_env(&config, Some(HIVE_ENV_VALUE)));
     }
 
     #[test]
     fn nested_herdr_does_not_block_when_allowed() {
         let config: config::Config =
             toml::from_str("[experimental]\nallow_nested = true\n").unwrap();
-        assert!(!should_block_nested_for_env(&config, Some(HERDR_ENV_VALUE)));
+        assert!(!should_block_nested_for_env(&config, Some(HIVE_ENV_VALUE)));
     }
 
     #[test]
@@ -901,12 +901,12 @@ mod tests {
     #[test]
     fn random_nested_message_comes_from_known_set() {
         let message = random_nested_message();
-        assert!(NESTED_HERDR_MESSAGES.contains(&message));
+        assert!(NESTED_HIVE_MESSAGES.contains(&message));
     }
 
     #[test]
     fn nested_message_strings_no_longer_repeat_herdr_prefix() {
-        assert!(NESTED_HERDR_MESSAGES
+        assert!(NESTED_HIVE_MESSAGES
             .iter()
             .all(|message| !message.starts_with("herdr:")));
     }

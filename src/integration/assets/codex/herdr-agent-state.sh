@@ -2,8 +2,8 @@
 # installed by herdr
 # managed by herdr; reinstalling or updating the integration overwrites this file.
 # add custom hooks beside this file instead of editing it.
-# HERDR_INTEGRATION_ID=codex
-# HERDR_INTEGRATION_VERSION=6
+# HIVE_INTEGRATION_ID=codex
+# HIVE_INTEGRATION_VERSION=6
 
 set -eu
 
@@ -17,23 +17,23 @@ case "$action" in
   *) exit 0 ;;
 esac
 
-[ "${HERDR_ENV:-}" = "1" ] || exit 0
-[ -n "${HERDR_SOCKET_PATH:-}" ] || exit 0
-[ -n "${HERDR_PANE_ID:-}" ] || exit 0
+[ "${HIVE_ENV:-}" = "1" ] || exit 0
+[ -n "${HIVE_SOCKET_PATH:-}" ] || exit 0
+[ -n "${HIVE_PANE_ID:-}" ] || exit 0
 command -v python3 >/dev/null 2>&1 || exit 0
 
-HERDR_ACTION="$action" HERDR_HOOK_INPUT_FILE="$hook_input_file" python3 - <<'PY'
+HIVE_ACTION="$action" HIVE_HOOK_INPUT_FILE="$hook_input_file" python3 - <<'PY'
 import json
 import os
 import random
 import socket
 import time
 
-source = "herdr:codex"
-action = os.environ.get("HERDR_ACTION", "")
-pane_id = os.environ.get("HERDR_PANE_ID")
-socket_path = os.environ.get("HERDR_SOCKET_PATH")
-hook_input_file = os.environ.get("HERDR_HOOK_INPUT_FILE")
+source = "hive:codex"
+action = os.environ.get("HIVE_ACTION", "")
+pane_id = os.environ.get("HIVE_PANE_ID")
+socket_path = os.environ.get("HIVE_SOCKET_PATH")
+hook_input_file = os.environ.get("HIVE_HOOK_INPUT_FILE")
 
 if not pane_id or not socket_path:
     raise SystemExit(0)

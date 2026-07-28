@@ -826,7 +826,7 @@ impl App {
         )];
         if let Ok(current_exe) = std::env::current_exe() {
             env.push((
-                "HERDR_BIN_PATH".to_string(),
+                "HIVE_BIN_PATH".to_string(),
                 current_exe.display().to_string(),
             ));
         }
@@ -834,23 +834,23 @@ impl App {
         let mut cwd = None;
         if let Some(ws_idx) = self.state.active {
             env.push((
-                "HERDR_ACTIVE_WORKSPACE_ID".to_string(),
+                "HIVE_ACTIVE_WORKSPACE_ID".to_string(),
                 self.public_workspace_id(ws_idx),
             ));
             if let Some(workspace) = self.state.workspaces.get(ws_idx) {
                 let tab_idx = workspace.active_tab_index();
                 if let Some(tab_id) = self.public_tab_id(ws_idx, tab_idx) {
-                    env.push(("HERDR_ACTIVE_TAB_ID".to_string(), tab_id));
+                    env.push(("HIVE_ACTIVE_TAB_ID".to_string(), tab_id));
                 }
                 if let Some(pane_id) = workspace.focused_pane_id() {
                     if let Some(public_pane_id) = self.public_pane_id(ws_idx, pane_id) {
-                        env.push(("HERDR_ACTIVE_PANE_ID".to_string(), public_pane_id));
+                        env.push(("HIVE_ACTIVE_PANE_ID".to_string(), public_pane_id));
                     }
                     if let Some(pane_cwd) = workspace.active_tab().and_then(|tab| {
                         tab.cwd_for_pane(pane_id, &self.state.terminals, &self.terminal_runtimes)
                     }) {
                         env.push((
-                            "HERDR_ACTIVE_PANE_CWD".to_string(),
+                            "HIVE_ACTIVE_PANE_CWD".to_string(),
                             pane_cwd.display().to_string(),
                         ));
                         if pane_cwd.is_dir() {
@@ -3159,7 +3159,7 @@ navigate_pane_down = "ctrl+j"
         let output_path = unique_temp_path("custom-command-keybind");
         let release_path = unique_temp_path("custom-command-release");
         let command = format!(
-            "printf '%s\\n%s\\n%s\\n%s\\n' \"$$\" \"$HERDR_ACTIVE_WORKSPACE_ID\" \"$HERDR_ACTIVE_TAB_ID\" \"$HERDR_ACTIVE_PANE_ID\" > '{}'; i=0; while [ ! -e '{}' ] && [ \"$i\" -lt 250 ]; do sleep 0.02; i=$((i + 1)); done",
+            "printf '%s\\n%s\\n%s\\n%s\\n' \"$$\" \"$HIVE_ACTIVE_WORKSPACE_ID\" \"$HIVE_ACTIVE_TAB_ID\" \"$HIVE_ACTIVE_PANE_ID\" > '{}'; i=0; while [ ! -e '{}' ] && [ \"$i\" -lt 250 ]; do sleep 0.02; i=$((i + 1)); done",
             output_path.display(),
             release_path.display(),
         );

@@ -1,18 +1,18 @@
 #!/bin/sh
 set -eu
 
-# herdr install script (Unix: Linux / macOS)
+# hive install script (Unix: Linux / macOS)
 # Downloads the latest release from PaRr0tBoY/herdr
 # Usage: curl -fsSL <raw-url> | sh
 
-BIN="herdr"
+BIN="hive"
 REPO="PaRr0tBoY/herdr"
-INSTALL_DIR="${HERDR_INSTALL_DIR:-$HOME/.local/bin}"
+INSTALL_DIR="${HIVE_INSTALL_DIR:-$HOME/.local/bin}"
 API_URL="https://api.github.com/repos/${REPO}/releases/latest"
 
 main() {
     echo ""
-    echo "      herdr installer (fork)"
+    echo "      hive installer (fork)"
     echo "      github.com/${REPO}"
     echo ""
 
@@ -106,7 +106,7 @@ main() {
     esac
 
     echo ""
-    log "done. run 'herdr' to start."
+    log "done. run 'hive' to start."
     echo ""
 }
 

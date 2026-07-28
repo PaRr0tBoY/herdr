@@ -264,7 +264,11 @@ mod tests {
             labels,
             vec![
                 ("1 main·pi".into(), "pi".into(), Some(Agent::Pi)),
-                ("2 review·claude".into(), "claude".into(), Some(Agent::Claude)),
+                (
+                    "2 review·claude".into(),
+                    "claude".into(),
+                    Some(Agent::Claude)
+                ),
             ]
         );
     }

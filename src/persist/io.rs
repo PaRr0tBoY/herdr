@@ -112,10 +112,22 @@ pub fn clear_history() {
 
 pub fn load() -> Option<SessionSnapshot> {
     let path = session_path();
-    if !path.exists() {
-        return None;
+    if path.exists() {
+        return load_from_path(&path);
     }
-    let content = match std::fs::read_to_string(&path) {
+
+    // First-launch migration: try reading from herdr's session directory
+    if let Some(herdr_snapshot) = try_load_herdr_session() {
+        // Save to our own location for future loads
+        save(&herdr_snapshot, None);
+        return Some(herdr_snapshot);
+    }
+
+    None
+}
+
+fn load_from_path(path: &Path) -> Option<SessionSnapshot> {
+    let content = match std::fs::read_to_string(path) {
         Ok(content) => content,
         Err(err) => {
             warn!(err = %err, "failed to read session file");
@@ -130,7 +142,7 @@ pub fn load() -> Option<SessionSnapshot> {
                     warn!(
                         file_version = version,
                         supported = SNAPSHOT_VERSION,
-                        "session file is from a newer herdr version, ignoring"
+                        "session file is from a newer hive version, ignoring"
                     );
                     return None;
                 }
@@ -138,6 +150,31 @@ pub fn load() -> Option<SessionSnapshot> {
             warn!(err = %err, "failed to parse session file, ignoring");
             None
         }
+    }
+}
+
+/// Derive herdr's config directory: same parent as hive's but with "herdr" as
+/// the app dir name.  On first launch after rename this lets us pick up the
+/// old session automatically.
+fn herdr_config_dir() -> PathBuf {
+    let base = crate::config::platform_config_dir();
+    // platform_config_dir already appends app_dir_name(); go up one level and
+    // use "herdr" instead.
+    base.parent().unwrap_or(&base).join("herdr")
+}
+
+fn try_load_herdr_session() -> Option<SessionSnapshot> {
+    let herdr_dir = herdr_config_dir();
+    let herdr_session_name = crate::session::active_name();
+    let herdr_data_dir = match herdr_session_name.as_deref() {
+        Some(name) => herdr_dir.join("sessions").join(name),
+        None => herdr_dir,
+    };
+    let herdr_session_path = herdr_data_dir.join("session.json");
+    if herdr_session_path.exists() {
+        load_from_path(&herdr_session_path)
+    } else {
+        None
     }
 }
 

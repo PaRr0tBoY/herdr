@@ -7,10 +7,10 @@ import { join } from "node:path";
 const originalPlatform = process.platform;
 const originalCreateConnection = net.createConnection;
 const originalEnvironment = {
-  HERDR_ENV: process.env.HERDR_ENV,
-  HERDR_OMP_IDLE_DEBOUNCE_MS: process.env.HERDR_OMP_IDLE_DEBOUNCE_MS,
-  HERDR_PANE_ID: process.env.HERDR_PANE_ID,
-  HERDR_SOCKET_PATH: process.env.HERDR_SOCKET_PATH,
+  HIVE_ENV: process.env.HIVE_ENV,
+  HIVE_OMP_IDLE_DEBOUNCE_MS: process.env.HIVE_OMP_IDLE_DEBOUNCE_MS,
+  HIVE_PANE_ID: process.env.HIVE_PANE_ID,
+  HIVE_SOCKET_PATH: process.env.HIVE_SOCKET_PATH,
 };
 
 let server: Server | undefined;
@@ -85,9 +85,9 @@ function createExtensionHarness() {
 }
 
 function configureIntegrationEnvironment(recordingSocketPath: string) {
-  process.env.HERDR_ENV = "1";
-  process.env.HERDR_SOCKET_PATH = recordingSocketPath;
-  process.env.HERDR_PANE_ID = "test:p1";
+  process.env.HIVE_ENV = "1";
+  process.env.HIVE_SOCKET_PATH = recordingSocketPath;
+  process.env.HIVE_PANE_ID = "test:p1";
 }
 
 function captureConnectionEndpoint() {
@@ -148,9 +148,9 @@ for (const socketPlugin of socketPlugins) {
 }
 
 test("OpenCode stays disabled without the Herdr socket environment", async () => {
-  process.env.HERDR_ENV = "1";
-  process.env.HERDR_PANE_ID = "test:p1";
-  delete process.env.HERDR_SOCKET_PATH;
+  process.env.HIVE_ENV = "1";
+  process.env.HIVE_PANE_ID = "test:p1";
+  delete process.env.HIVE_SOCKET_PATH;
 
   const { HerdrAgentStatePlugin } = await importFresh("./opencode/herdr-agent-state.js");
 
@@ -436,7 +436,7 @@ async function startDroppedFirstResponseServer(name: string) {
 
 test("Oh My Pi retries working before a queued idle state", async () => {
   const { attemptedRequests } = await startDroppedFirstResponseServer("omp-retry");
-  process.env.HERDR_OMP_IDLE_DEBOUNCE_MS = "0";
+  process.env.HIVE_OMP_IDLE_DEBOUNCE_MS = "0";
   const { handlers, pi } = createExtensionHarness();
 
   const { default: install } = await importFresh("./omp/herdr-agent-state.ts");

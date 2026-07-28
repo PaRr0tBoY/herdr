@@ -1,12 +1,12 @@
 #!/bin/sh
 # managed by herdr; reinstalling the integration replaces this file.
-# HERDR_INTEGRATION_ID=cursor
-# HERDR_INTEGRATION_VERSION=1
+# HIVE_INTEGRATION_ID=cursor
+# HIVE_INTEGRATION_VERSION=1
 
 [ "${1:-}" = "session" ] || exit 0
-[ "${HERDR_ENV:-}" = "1" ] || exit 0
-[ -n "${HERDR_SOCKET_PATH:-}" ] || exit 0
-[ -n "${HERDR_PANE_ID:-}" ] || exit 0
+[ "${HIVE_ENV:-}" = "1" ] || exit 0
+[ -n "${HIVE_SOCKET_PATH:-}" ] || exit 0
+[ -n "${HIVE_PANE_ID:-}" ] || exit 0
 command -v python3 >/dev/null 2>&1 || exit 0
 
 python3 -c '
@@ -38,11 +38,11 @@ if session_id is None:
 
 seq = time.time_ns()
 request = json.dumps({
-    "id": f"herdr:cursor:{seq}",
+    "id": f"hive:cursor:{seq}",
     "method": "pane.report_agent_session",
     "params": {
-        "pane_id": os.environ["HERDR_PANE_ID"],
-        "source": "herdr:cursor",
+        "pane_id": os.environ["HIVE_PANE_ID"],
+        "source": "hive:cursor",
         "agent": "cursor",
         "seq": seq,
         "agent_session_id": session_id,
@@ -51,7 +51,7 @@ request = json.dumps({
 try:
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
         client.settimeout(0.5)
-        client.connect(os.environ["HERDR_SOCKET_PATH"])
+        client.connect(os.environ["HIVE_SOCKET_PATH"])
         client.sendall((request + "\n").encode())
         client.recv(4096)
 except Exception:

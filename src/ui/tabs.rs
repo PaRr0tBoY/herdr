@@ -141,7 +141,9 @@ pub(crate) fn compute_tab_bar_view(
     let all_tabs_area = Rect::new(
         area.x,
         area.y,
-        area.width.saturating_sub(NEW_TAB_WIDTH).saturating_sub(NOTE_BUTTON_WIDTH),
+        area.width
+            .saturating_sub(NEW_TAB_WIDTH)
+            .saturating_sub(NOTE_BUTTON_WIDTH),
         area.height,
     );
     let all_tabs = layout_tab_hit_areas(ws, all_tabs_area, 0);

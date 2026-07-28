@@ -32,10 +32,11 @@ pub use self::{
     theme::{parse_color, CustomThemeColors, ThemeConfig},
 };
 
+pub(crate) use self::io::platform_config_dir;
 pub(crate) use self::io::upsert_top_level_bool;
 pub(crate) use self::keybinds::parse_key_combo;
 
-pub const CONFIG_PATH_ENV_VAR: &str = "HERDR_CONFIG_PATH";
+pub const CONFIG_PATH_ENV_VAR: &str = "HIVE_CONFIG_PATH";
 pub const DEFAULT_SCROLLBACK_LIMIT_BYTES: usize = 10_000_000;
 pub const DEFAULT_MOUSE_SCROLL_LINES: usize = 3;
 pub const DEFAULT_MOBILE_WIDTH_THRESHOLD: u16 = 64;

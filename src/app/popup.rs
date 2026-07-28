@@ -205,7 +205,11 @@ impl App {
 /// so we mix panel_bg toward white/black for visible contrast.
 fn note_selection_bg(p: &crate::app::state::Palette) -> ratatui::style::Color {
     use ratatui::style::Color;
-    let fallback_rgb = match if p.panel_bg == Color::Reset { p.surface_dim } else { p.panel_bg } {
+    let fallback_rgb = match if p.panel_bg == Color::Reset {
+        p.surface_dim
+    } else {
+        p.panel_bg
+    } {
         Color::Rgb(r, g, b) => (r, g, b),
         Color::Black => (0, 0, 0),
         Color::White => (255, 255, 255),
@@ -216,11 +220,19 @@ fn note_selection_bg(p: &crate::app::state::Palette) -> ratatui::style::Color {
         let (r, g, b) = fallback_rgb;
         let (r, g, b) = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
         let channel = |v: f32| -> f32 {
-            if v <= 0.03928 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
+            if v <= 0.03928 {
+                v / 12.92
+            } else {
+                ((v + 0.055) / 1.055).powf(2.4)
+            }
         };
         0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
     };
-    let target: (u8, u8, u8) = if lum < 0.5 { (255, 255, 255) } else { (0, 0, 0) };
+    let target: (u8, u8, u8) = if lum < 0.5 {
+        (255, 255, 255)
+    } else {
+        (0, 0, 0)
+    };
     let mix = |base: u8, tgt: u8| -> u8 {
         (f32::from(base) + (f32::from(tgt) - f32::from(base)) * 0.40).round() as u8
     };
@@ -234,13 +246,21 @@ fn selection_fg_for_bg(bg: ratatui::style::Color) -> ratatui::style::Color {
         Color::Rgb(r, g, b) => {
             let (r, g, b) = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
             let channel = |v: f32| -> f32 {
-                if v <= 0.03928 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
+                if v <= 0.03928 {
+                    v / 12.92
+                } else {
+                    ((v + 0.055) / 1.055).powf(2.4)
+                }
             };
             0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
         }
         _ => 0.0,
     };
-    if lum < 0.5 { Color::White } else { Color::Black }
+    if lum < 0.5 {
+        Color::White
+    } else {
+        Color::Black
+    }
 }
 
 impl App {
@@ -294,15 +314,19 @@ impl App {
         // toward white/black at 0.40 for visible contrast.
         let sel_bg = note_selection_bg(&self.state.palette);
         let sel_fg = selection_fg_for_bg(sel_bg);
-        textarea.set_selection_style(
-            ratatui::style::Style::default().fg(sel_fg).bg(sel_bg),
-        );
+        textarea.set_selection_style(ratatui::style::Style::default().fg(sel_fg).bg(sel_bg));
         // Restore cursor position from previous session.
         if let Some((row, col)) = self.state.note_cursor.take() {
             use ratatui_textarea::CursorMove;
             let max_row = textarea.lines().len().saturating_sub(1);
             let row = row.min(max_row);
-            let col = col.min(textarea.lines().get(row).map(|l| l.chars().count()).unwrap_or(0));
+            let col = col.min(
+                textarea
+                    .lines()
+                    .get(row)
+                    .map(|l| l.chars().count())
+                    .unwrap_or(0),
+            );
             textarea.move_cursor(CursorMove::Jump(row as u16, col as u16));
         }
         self.state.note_textarea = Some(textarea);
