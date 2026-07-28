@@ -305,3 +305,66 @@ jobs:
             --title "Hive $tag" \
             --notes "$notes" \
             release/*
+
+
+      - name: Publish release manifest to GitHub Pages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${{ needs.preflight.outputs.version }}"
+          tag="v$version"
+          pages_repo="PaRr0tBoY/PaRr0tBoY.github.io"
+          manifest_path="product/Hive/install/latest.json"
+
+          # Compute SHA256 for each artifact
+          json=$(python3 -c "
+import hashlib, json, pathlib
+assets = {}
+for d in pathlib.Path('artifacts').iterdir():
+    if not d.is_dir():
+        continue
+    for f in d.iterdir():
+        name = f.name
+        sha = hashlib.sha256(f.read_bytes()).hexdigest()
+        # Map filenames to platform keys
+        key = name \
+            .removeprefix('hive-') \
+            .removesuffix('.exe') \
+            .removesuffix('.zip')
+        fmt = 'zip' if name.endswith('.zip') else 'exe'
+        assets[key] = { 'url': f'https://github.com/PaRr0tBoY/herdr/releases/download/{tag}/{name}', 'sha256': sha, 'format': fmt }
+manifest = {
+    'schema_version': 1,
+    'channel': 'stable',
+    'version': '$version',
+    'notes': f'Hive v{version}',
+    'assets': assets,
+}
+print(json.dumps(manifest, indent=2))
+")
+
+          # Clone GitHub Pages repo, write manifest, push
+          tmpdir=$(mktemp -d)
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${pages_repo}.git" "$tmpdir"
+          mkdir -p "$tmpdir/$(dirname $manifest_path)"
+          echo "$json" > "$tmpdir/$manifest_path"
+          cd "$tmpdir"
+          git config user.name "kangal-bot"
+          git config user.email "285672167+kangal-bot@users.noreply.github.com"
+          git add "$manifest_path"
+          git diff --cached --quiet || git commit -m "Hive: update release manifest for v$version"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin main; then
+              echo "Published manifest to ${pages_repo}/${manifest_path}"
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "main changed during manifest publishing; retrying ($attempt/3)"
+              sleep $((attempt * 2))
+            fi
+          done
+          echo "failed to publish manifest after 3 attempts" >&2
+          exit 1
+

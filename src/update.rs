@@ -24,9 +24,9 @@ use interprocess::local_socket::traits::Stream as _;
 use serde::{Deserialize, Deserializer};
 
 const STABLE_UPDATE_MANIFEST_URL: &str =
-    "https://api.github.com/repos/PaRr0tBoY/herdr/releases/latest";
+    "https://PaRr0tBoY.github.io/product/Hive/install/latest.json";
 const PREVIEW_UPDATE_MANIFEST_URL: &str =
-    "https://api.github.com/repos/PaRr0tBoY/herdr/releases/latest";
+    "https://PaRr0tBoY.github.io/product/Hive/install/preview.json";
 const HOMEBREW_FORMULA_API_URL: &str = "https://formulae.brew.sh/api/formula/herdr.json";
 const HIVE_UPDATE_COMMAND: &str = "herdr update";
 const HOMEBREW_UPDATE_COMMAND: &str = "brew update && brew upgrade herdr";
@@ -1955,12 +1955,6 @@ fn homebrew_cellar_keg_root(path: &Path) -> Option<PathBuf> {
 /// Manual self-update command (`herdr update`).
 pub fn self_update(options: SelfUpdateOptions) -> Result<Version, String> {
     let channel = UpdateChannel::configured();
-    #[cfg(windows)]
-    if channel == UpdateChannel::Stable {
-        return Err(
-            "Windows builds are preview-only for now; run `herdr channel set preview`".into(),
-        );
-    }
 
     if is_homebrew_managed_install() {
         if channel == UpdateChannel::Preview {
