@@ -94,7 +94,9 @@ jobs:
           cache-bin: false
 
       - name: Run checks
-        run: just check
+        run: |
+          cargo fmt --check
+          cargo clippy --bin hive --locked -- -D warnings
 
   build:
     needs: preflight
