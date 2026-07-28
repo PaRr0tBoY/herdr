@@ -579,7 +579,11 @@ impl FrameData {
                 cell.fg = u32_to_color(cell_data.fg);
                 cell.bg = u32_to_color(cell_data.bg);
                 cell.modifier = u16_to_modifier(cell_data.modifier);
-                cell.set_diff_option(if cell_data.skip { ratatui::buffer::CellDiffOption::Skip } else { ratatui::buffer::CellDiffOption::None });
+                cell.set_diff_option(if cell_data.skip {
+                    ratatui::buffer::CellDiffOption::Skip
+                } else {
+                    ratatui::buffer::CellDiffOption::None
+                });
             }
         }
 
