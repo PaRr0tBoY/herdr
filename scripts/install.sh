@@ -2,18 +2,17 @@
 set -eu
 
 # hive install script (Unix: Linux / macOS)
-# Downloads the latest release from PaRr0tBoY/herdr
 # Usage: curl -fsSL <raw-url> | sh
 
 BIN="hive"
-REPO="PaRr0tBoY/herdr"
+BASE_URL="https://PaRr0tBoY.github.io/product/Hive/install"
+LATEST_JSON_URL="${BASE_URL}/latest.json"
 INSTALL_DIR="${HIVE_INSTALL_DIR:-$HOME/.local/bin}"
-API_URL="https://api.github.com/repos/${REPO}/releases/latest"
 
 main() {
     echo ""
     echo "      hive installer (fork)"
-    echo "      github.com/${REPO}"
+    echo "      ${BASE_URL}"
     echo ""
 
     # ---- detect platform ----
@@ -21,7 +20,7 @@ main() {
     case "$OS" in
         Linux)  os="linux" ;;
         Darwin) os="macos" ;;
-        MSYS*|MINGW*|CYGWIN*) err "Git Bash / MSYS detected. Use PowerShell instead: irm https://PaRr0tBoY.github.io/product/Hive/install/install.ps1 | iex" ;; 
+        MSYS*|MINGW*|CYGWIN*) err "Git Bash / MSYS detected. Use PowerShell instead: irm ${BASE_URL}/install.ps1 | iex" ;;
         *)                    err "unsupported OS: $OS (Linux and macOS only)" ;;
     esac
 
@@ -33,32 +32,32 @@ main() {
     esac
 
     target="${os}-${arch}"
-    asset_name="${BIN}-${target}"
     log "detected ${target}"
 
     need curl
 
-    # ---- fetch release info from GitHub API ----
-    log "fetching latest release..."
-    release_json="$(curl -fsSL --retry 3 --connect-timeout 10 --max-time 20 "$API_URL")" \
-        || err "can't reach GitHub API. Check your connection."
+    # ---- fetch latest manifest ----
+    log "fetching latest release manifest..."
+    manifest="$(curl -fsSL --retry 3 --connect-timeout 10 --max-time 20 "$LATEST_JSON_URL")" \
+        || err "can't reach $LATEST_JSON_URL. Check your connection."
 
-    # Parse tag name (version)
-    version="$(printf '%s\n' "$release_json" | tr -d '\n' | \
-        grep -o '"tag_name":"[^"]*"' | head -1 | \
-        sed 's/"tag_name":"\([^"]*\)"/\1/')"
+    # Parse version
+    version="$(printf '%s\n' "$manifest" | grep -o '"version":"[^"]*"' | head -1 | sed 's/"version":"\([^"]*\)"/\1/')"
+    if [ -z "$version" ]; then
+        err "could not parse version from manifest"
+    fi
 
-    # Find the download URL for this platform's asset
-    download_url="$(printf '%s\n' "$release_json" | tr -d '\n' | \
-        grep -o '"browser_download_url":"[^"]*'"${asset_name}"'[^"]*"' | head -1 | \
-        sed 's/"browser_download_url":"\([^"]*\)"/\1/')"
+    # Extract the asset block for this platform: "linux-x86_64": { "url": "...", "sha256": "..." }
+    asset_block="$(printf '%s\n' "$manifest" | sed -n '/"'"${target}"'": {/,/}/p')"
+    download_url="$(printf '%s\n' "$asset_block" | grep -o '"url":"[^"]*"' | head -1 | sed 's/"url":"\([^"]*\)"/\1/')"
+    expected_sha256="$(printf '%s\n' "$asset_block" | grep -o '"sha256":"[^"]*"' | head -1 | sed 's/"sha256":"\([^"]*\)"/\1/')"
 
     if [ -z "$download_url" ]; then
-        err "no asset '${asset_name}' found in release ${version}. Is this platform built?"
+        err "no asset '${target}' found in manifest. Is this platform built?"
     fi
 
     # ---- download ----
-    log "downloading ${version} (${asset_name})..."
+    log "downloading Hive ${version} (${target})..."
     TMP="$(mktemp -d)"
     trap 'rm -rf "$TMP"' EXIT
 
@@ -67,23 +66,20 @@ main() {
         err "download failed"
     fi
 
-    # ---- sha256 verification (if checksum file exists) ----
-    sha256_url="${download_url}.sha256"
-    if curl -fsSL --connect-timeout 5 --max-time 10 \
-        "$sha256_url" -o "${TMP}/${BIN}.sha256" 2>/dev/null; then
+    # ---- sha256 verification ----
+    if [ -n "$expected_sha256" ]; then
         log "verifying checksum..."
-        expected="$(awk '{print $1}' "${TMP}/${BIN}.sha256")"
         if command -v sha256sum >/dev/null 2>&1; then
             actual="$(sha256sum "${TMP}/${BIN}" | awk '{print $1}')"
         else
             actual="$(shasum -a 256 "${TMP}/${BIN}" | awk '{print $1}')"
         fi
-        if [ "$expected" != "$actual" ]; then
-            err "checksum mismatch"
+        if [ "$expected_sha256" != "$actual" ]; then
+            err "SHA-256 mismatch. Expected $expected_sha256, got $actual"
         fi
-        log "checksum ok"
+        log "checksum verified"
     else
-        warn "no checksum file; skipping verification"
+        warn "No checksum in manifest; skipping verification"
     fi
 
     # ---- install ----
