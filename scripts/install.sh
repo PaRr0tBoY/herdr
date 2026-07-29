@@ -42,15 +42,15 @@ main() {
         || err "can't reach $LATEST_JSON_URL. Check your connection."
 
     # Parse version
-    version="$(printf '%s\n' "$manifest" | grep -o '"version":"[^"]*"' | head -1 | sed 's/"version":"\([^"]*\)"/\1/')"
+    version="$(printf '%s\n' "$manifest" | grep -o '"version" *: *"[^"]*"' | head -1 | sed 's/"version" *: *"\([^"]*\)"/\1/')"
     if [ -z "$version" ]; then
         err "could not parse version from manifest"
     fi
 
     # Extract the asset block for this platform: "linux-x86_64": { "url": "...", "sha256": "..." }
     asset_block="$(printf '%s\n' "$manifest" | sed -n '/"'"${target}"'": {/,/}/p')"
-    download_url="$(printf '%s\n' "$asset_block" | grep -o '"url":"[^"]*"' | head -1 | sed 's/"url":"\([^"]*\)"/\1/')"
-    expected_sha256="$(printf '%s\n' "$asset_block" | grep -o '"sha256":"[^"]*"' | head -1 | sed 's/"sha256":"\([^"]*\)"/\1/')"
+    download_url="$(printf '%s\n' "$asset_block" | grep -o '"url" *: *"[^"]*"' | head -1 | sed 's/"url" *: *"\([^"]*\)"/\1/')"
+    expected_sha256="$(printf '%s\n' "$asset_block" | grep -o '"sha256" *: *"[^"]*"' | head -1 | sed 's/"sha256" *: *"\([^"]*\)"/\1/')"
 
     if [ -z "$download_url" ]; then
         err "no asset '${target}' found in manifest. Is this platform built?"
