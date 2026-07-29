@@ -2,6 +2,7 @@ use crossterm::event::{KeyCode, KeyModifiers};
 
 mod io;
 mod keybinds;
+mod migrate;
 mod model;
 mod sidebar;
 mod sound;
@@ -35,6 +36,7 @@ pub use self::{
 pub(crate) use self::io::platform_config_dir;
 pub(crate) use self::io::upsert_top_level_bool;
 pub(crate) use self::keybinds::parse_key_combo;
+pub(crate) use self::migrate::migrate_from_herdr;
 
 pub const CONFIG_PATH_ENV_VAR: &str = "HIVE_CONFIG_PATH";
 pub const DEFAULT_SCROLLBACK_LIMIT_BYTES: usize = 10_000_000;

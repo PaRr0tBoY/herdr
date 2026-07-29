@@ -97,9 +97,9 @@ fn schema_summary_text() -> std::io::Result<String> {
 }
 
 fn print_api_help() {
-    eprintln!("herdr api commands:");
-    eprintln!("  herdr api snapshot");
-    eprintln!("  herdr api schema [--json | --output PATH]");
+    eprintln!("hive api commands:");
+    eprintln!("  hive api snapshot");
+    eprintln!("  hive api schema [--json | --output PATH]");
 }
 
 fn print_api_schema_help() {

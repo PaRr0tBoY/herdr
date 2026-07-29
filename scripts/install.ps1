@@ -15,9 +15,9 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
-$Repo = "PaRr0tBoY/herdr"
-$ApiUrl = "https://api.github.com/repos/$Repo/releases/latest"
-$AssetName = "hive-windows-x86_64.zip"
+$BaseUrl = "https://PaRr0tBoY.github.io/product/Hive/install"
+$LatestJsonUrl = "$BaseUrl/latest.json"
+$AssetName = "windows-x86_64"
 
 # ---- preflight ----
 if ($env:OS -ne "Windows_NT") {
@@ -39,27 +39,31 @@ if ([string]::IsNullOrWhiteSpace($InstallDir)) {
     $InstallDir = Join-Path $env:LOCALAPPDATA "Programs\Hive\bin"
 }
 
-# ---- fetch release ----
-Write-Host "==> Fetching latest release from $Repo..."
+# ---- fetch latest manifest ----
+Write-Host "==> Fetching latest release manifest..."
 try {
-    $release = Invoke-RestMethod -Uri $ApiUrl -TimeoutSec 20
+    $manifest = Invoke-RestMethod -Uri $LatestJsonUrl -TimeoutSec 20
 } catch {
-    Write-Error "Can't reach GitHub API. Check your connection."
+    Write-Error "Can't reach $LatestJsonUrl. Check your connection."
     exit 1
 }
 
+$version = $manifest.version
+$asset = $manifest.assets.$AssetName
 if (-not $version) {
-    Write-Error "Could not parse version from release."
+    Write-Error "Could not parse version from manifest."
+    exit 1
+}
+if (-not $asset) {
+    Write-Error "Asset '$AssetName' not found in manifest. Is this platform built?"
     exit 1
 }
 
-if (-not $asset) {
-    Write-Error "Asset '$AssetName' not found in release $version. Is this platform built?"
-    exit 1
-}
+$downloadUrl = $asset.url
+$expectedSha256 = $asset.sha256
 
 # ---- download ----
-Write-Host "==> Downloading $version ($AssetName)..."
+Write-Host "==> Downloading Hive $version..."
 $tmpDir = Join-Path $env:TEMP "hive-install-$([System.Guid]::NewGuid().ToString('N'))"
 New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
 
@@ -67,29 +71,29 @@ try {
     $zipPath = Join-Path $tmpDir "hive-windows-x86_64.zip"
 
     try {
-        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zipPath -TimeoutSec 300
+        Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath -TimeoutSec 300
     } catch {
         Write-Error "Download failed: $_"
         exit 1
     }
 
     # ---- sha256 verification ----
-    $shaUrl = "$($asset.browser_download_url).sha256"
-    try {
-        $shaPath = Join-Path $tmpDir "hive-windows-x86_64.zip.sha256"
-        Invoke-WebRequest -Uri $shaUrl -OutFile $shaPath -TimeoutSec 10 -ErrorAction Stop
-        $expected = ((Get-Content $shaPath -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
+    if ($expectedSha256) {
         $actual = (Get-FileHash -Algorithm SHA256 $zipPath).Hash.ToLowerInvariant()
-        if ($expected -ne $actual) {
-            Write-Error "SHA-256 mismatch. Expected $expected, got $actual."
+        if ($expectedSha256 -ne $actual) {
+            Write-Error "SHA-256 mismatch. Expected $expectedSha256, got $actual."
             exit 1
         }
         Write-Host "==> Checksum verified"
-    } catch [System.Net.WebException] {
-        Write-Warning "No checksum file found; skipping verification"
+    } else {
+        Write-Warning "No checksum in manifest; skipping verification"
     }
 
     # ---- extract ----
+    # Clean previous install to avoid file-exists errors
+    Remove-Item -Path (Join-Path $InstallDir "hive.exe") -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path (Join-Path $InstallDir "conpty") -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path (Join-Path $InstallDir "THIRD-PARTY-NOTICES") -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $InstallDir)

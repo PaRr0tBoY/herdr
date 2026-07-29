@@ -324,8 +324,8 @@ fn current_exe_label() -> String {
 }
 
 fn print_status_help() {
-    eprintln!("herdr status commands:");
-    eprintln!("  herdr status [--json]         show local client and running server status");
-    eprintln!("  herdr status server [--json]  show running server status");
-    eprintln!("  herdr status client [--json]  show local client binary status");
+    eprintln!("hive status commands:");
+    eprintln!("  hive status [--json]         show local client and running server status");
+    eprintln!("  hive status server [--json]  show running server status");
+    eprintln!("  hive status client [--json]  show local client binary status");
 }

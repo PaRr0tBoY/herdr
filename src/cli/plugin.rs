@@ -1637,31 +1637,31 @@ fn print_plugin_response(method: Method) -> std::io::Result<i32> {
 }
 
 fn print_plugin_help() {
-    eprintln!("herdr plugin commands:");
-    eprintln!("  herdr plugin install <owner>/<repo>[/subdir...] [--ref REF] [--yes]");
-    eprintln!("  herdr plugin uninstall <plugin_id|owner/repo[/subdir...]>");
-    eprintln!("  herdr plugin link <path> [--disabled]");
-    eprintln!("  herdr plugin list [--plugin ID] [--json]");
-    eprintln!("  herdr plugin config-dir <plugin_id>");
-    eprintln!("  herdr plugin unlink <plugin_id>");
-    eprintln!("  herdr plugin enable <plugin_id>");
-    eprintln!("  herdr plugin disable <plugin_id>");
-    eprintln!("  herdr plugin action <list|invoke>");
-    eprintln!("  herdr plugin log list [--plugin ID] [--limit N]");
-    eprintln!("  herdr plugin pane <open|focus|close>");
+    eprintln!("hive plugin commands:");
+    eprintln!("  hive plugin install <owner>/<repo>[/subdir...] [--ref REF] [--yes]");
+    eprintln!("  hive plugin uninstall <plugin_id|owner/repo[/subdir...]>");
+    eprintln!("  hive plugin link <path> [--disabled]");
+    eprintln!("  hive plugin list [--plugin ID] [--json]");
+    eprintln!("  hive plugin config-dir <plugin_id>");
+    eprintln!("  hive plugin unlink <plugin_id>");
+    eprintln!("  hive plugin enable <plugin_id>");
+    eprintln!("  hive plugin disable <plugin_id>");
+    eprintln!("  hive plugin action <list|invoke>");
+    eprintln!("  hive plugin log list [--plugin ID] [--limit N]");
+    eprintln!("  hive plugin pane <open|focus|close>");
 }
 
 fn print_plugin_action_help() {
-    eprintln!("herdr plugin action commands:");
-    eprintln!("  herdr plugin action list [--plugin ID]");
-    eprintln!("  herdr plugin action invoke <action_id> [--plugin ID]");
+    eprintln!("hive plugin action commands:");
+    eprintln!("  hive plugin action list [--plugin ID]");
+    eprintln!("  hive plugin action invoke <action_id> [--plugin ID]");
 }
 
 fn print_plugin_pane_help() {
-    eprintln!("herdr plugin pane commands:");
-    eprintln!("  herdr plugin pane open --plugin ID --entrypoint ID [--placement overlay|popup|split|tab|zoomed] [--width SIZE] [--height SIZE] [--workspace ID] [--target-pane PANE] [--direction right|down] [--cwd PATH] [--env KEY=VALUE] [--focus|--no-focus]");
-    eprintln!("  herdr plugin pane focus <pane_id>");
-    eprintln!("  herdr plugin pane close <pane_id>");
+    eprintln!("hive plugin pane commands:");
+    eprintln!("  hive plugin pane open --plugin ID --entrypoint ID [--placement overlay|popup|split|tab|zoomed] [--width SIZE] [--height SIZE] [--workspace ID] [--target-pane PANE] [--direction right|down] [--cwd PATH] [--env KEY=VALUE] [--focus|--no-focus]");
+    eprintln!("  hive plugin pane focus <pane_id>");
+    eprintln!("  hive plugin pane close <pane_id>");
 }
 
 #[cfg(test)]

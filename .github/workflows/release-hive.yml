@@ -368,3 +368,5 @@ print(json.dumps(manifest, indent=2))
           echo "failed to publish manifest after 3 attempts" >&2
           exit 1
 
+  close-released-issues:
+    needs: publish

@@ -253,14 +253,16 @@ fn parse_live_handoff_params(args: &[String]) -> Option<ServerLiveHandoffParams>
 }
 
 fn print_server_help() {
-    eprintln!("herdr server commands:");
-    eprintln!("  herdr server                run as headless server");
-    eprintln!("  herdr server stop           stop the running server via the API socket");
-    eprintln!("  herdr server live-handoff   hand off live panes to a new local server");
-    eprintln!("  herdr server reload-config  reload config.toml in the running server");
-    eprintln!("  herdr server agent-manifests [--json]  show agent detection manifest status");
-    eprintln!("  herdr server update-agent-manifests [--json]  fetch and reload agent detection manifests");
-    eprintln!("  herdr server reload-agent-manifests  reload agent detection manifests in the running server");
+    eprintln!("hive server commands:");
+    eprintln!("  hive server                run as headless server");
+    eprintln!("  hive server stop           stop the running server via the API socket");
+    eprintln!("  hive server live-handoff   hand off live panes to a new local server");
+    eprintln!("  hive server reload-config  reload config.toml in the running server");
+    eprintln!("  hive server agent-manifests [--json]  show agent detection manifest status");
+    eprintln!(
+        "  hive server update-agent-manifests [--json]  fetch and reload agent detection manifests"
+    );
+    eprintln!("  hive server reload-agent-manifests  reload agent detection manifests in the running server");
 }
 
 #[cfg(test)]

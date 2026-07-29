@@ -177,13 +177,13 @@ fn tab_close(args: &[String]) -> std::io::Result<i32> {
 }
 
 fn print_tab_help() {
-    eprintln!("herdr tab commands:");
-    eprintln!("  herdr tab list [--workspace <workspace_id>]");
+    eprintln!("hive tab commands:");
+    eprintln!("  hive tab list [--workspace <workspace_id>]");
     eprintln!(
-        "  herdr tab create [--workspace <workspace_id>] [--cwd PATH] [--label TEXT] [--env KEY=VALUE] [--focus] [--no-focus]"
+        "  hive tab create [--workspace <workspace_id>] [--cwd PATH] [--label TEXT] [--env KEY=VALUE] [--focus] [--no-focus]"
     );
-    eprintln!("  herdr tab get <tab_id>");
-    eprintln!("  herdr tab focus <tab_id>");
-    eprintln!("  herdr tab rename <tab_id> <label>");
-    eprintln!("  herdr tab close <tab_id>");
+    eprintln!("  hive tab get <tab_id>");
+    eprintln!("  hive tab focus <tab_id>");
+    eprintln!("  hive tab rename <tab_id> <label>");
+    eprintln!("  hive tab close <tab_id>");
 }
