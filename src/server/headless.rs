@@ -4577,9 +4577,7 @@ fn print_ready_message(api_socket: &Path, client_socket: &Path) {
     eprintln!("client socket: {}", client_socket.display());
     eprintln!(
         "logs: {}",
-        crate::session::data_dir()
-            .join("hive-server.log")
-            .display()
+        crate::session::data_dir().join("hive-server.log").display()
     );
     eprintln!("did you mean to open the Hive TUI? run `hive`; you do not need `hive server`.");
 }

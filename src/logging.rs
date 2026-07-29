@@ -48,8 +48,6 @@ pub(crate) fn startup(role: &'static str) {
     );
 }
 
-
-
 pub(crate) fn shutdown(role: &'static str) {
     tracing::info!(
         event = "app.shutdown",
@@ -603,10 +601,7 @@ mod tests {
     #[test]
     fn rotated_log_path_appends_numeric_suffix() {
         let path = PathBuf::from("/tmp/hive.log");
-        assert_eq!(
-            rotated_log_path(&path, 2),
-            PathBuf::from("/tmp/hive.log.2")
-        );
+        assert_eq!(rotated_log_path(&path, 2), PathBuf::from("/tmp/hive.log.2"));
     }
 
     #[test]

@@ -670,8 +670,8 @@ fn windows_installed_hive_exe_path() -> Result<PathBuf, String> {
         return Ok(PathBuf::from(install_dir).join("hive.exe"));
     }
 
-    let local_app_data = env::var_os("LOCALAPPDATA")
-        .ok_or("LOCALAPPDATA is not set; cannot locate Hive install")?;
+    let local_app_data =
+        env::var_os("LOCALAPPDATA").ok_or("LOCALAPPDATA is not set; cannot locate Hive install")?;
     Ok(PathBuf::from(local_app_data)
         .join("Programs")
         .join("Hive")

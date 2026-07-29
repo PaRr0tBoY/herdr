@@ -150,15 +150,15 @@ mod tests {
     fn old_app_dir_name_is_herdr() {
         // The old name should always be "herdr" regardless of debug/release.
         let name = old_app_dir_name();
-        assert!(name.starts_with("herdr"), "expected herdr prefix, got {name}");
+        assert!(
+            name.starts_with("herdr"),
+            "expected herdr prefix, got {name}"
+        );
     }
 
     #[test]
     fn copy_dir_copies_all_files() {
-        let tmp = std::env::temp_dir().join(format!(
-            "hive-migrate-test-{}",
-            std::process::id()
-        ));
+        let tmp = std::env::temp_dir().join(format!("hive-migrate-test-{}", std::process::id()));
         let src = tmp.join("herdr");
         let dst = tmp.join("hive");
 
@@ -184,10 +184,8 @@ mod tests {
 
     #[test]
     fn copy_dir_creates_parent_dirs() {
-        let tmp = std::env::temp_dir().join(format!(
-            "hive-migrate-parent-test-{}",
-            std::process::id()
-        ));
+        let tmp =
+            std::env::temp_dir().join(format!("hive-migrate-parent-test-{}", std::process::id()));
         let src = tmp.join("herdr");
         let dst = tmp.join("nested/hive");
 

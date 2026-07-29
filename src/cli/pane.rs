@@ -1503,7 +1503,9 @@ fn print_pane_help() {
     eprintln!("  hive pane swap --direction left|right|up|down [--pane ID|--current]");
     eprintln!("  hive pane swap --source-pane ID --target-pane ID");
     eprintln!("  hive pane move <pane_id> --tab <tab_id> --split right|down [--target-pane ID] [--ratio FLOAT] [--focus|--no-focus]");
-    eprintln!("  hive pane move <pane_id> --new-tab [--workspace ID] [--label TEXT] [--focus|--no-focus]");
+    eprintln!(
+        "  hive pane move <pane_id> --new-tab [--workspace ID] [--label TEXT] [--focus|--no-focus]"
+    );
     eprintln!("  hive pane move <pane_id> --new-workspace [--label TEXT] [--tab-label TEXT] [--focus|--no-focus]");
     eprintln!("  hive pane close <pane_id>");
     eprintln!("  hive pane send-text <pane_id> <text>");

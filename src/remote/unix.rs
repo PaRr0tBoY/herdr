@@ -1720,9 +1720,7 @@ impl SshStdioBridge {
                 match listener.accept() {
                     Ok((stream, _addr)) => {
                         if let Err(err) = stream.set_nonblocking(false) {
-                            eprintln!(
-                                "hive: remote bridge failed to prepare client socket: {err}"
-                            );
+                            eprintln!("hive: remote bridge failed to prepare client socket: {err}");
                             continue;
                         }
                         if let Err(err) = bridge_connection(

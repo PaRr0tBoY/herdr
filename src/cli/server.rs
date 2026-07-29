@@ -259,7 +259,9 @@ fn print_server_help() {
     eprintln!("  hive server live-handoff   hand off live panes to a new local server");
     eprintln!("  hive server reload-config  reload config.toml in the running server");
     eprintln!("  hive server agent-manifests [--json]  show agent detection manifest status");
-    eprintln!("  hive server update-agent-manifests [--json]  fetch and reload agent detection manifests");
+    eprintln!(
+        "  hive server update-agent-manifests [--json]  fetch and reload agent detection manifests"
+    );
     eprintln!("  hive server reload-agent-manifests  reload agent detection manifests in the running server");
 }
 
