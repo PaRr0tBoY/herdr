@@ -90,10 +90,13 @@ try {
     }
 
     # ---- extract ----
+    # Clean previous install to avoid file-exists errors
+    Remove-Item -Path (Join-Path $InstallDir "hive.exe") -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path (Join-Path $InstallDir "conpty") -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path (Join-Path $InstallDir "THIRD-PARTY-NOTICES") -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $InstallDir)
-    $exePath = Join-Path $InstallDir "hive.exe"
     Write-Host "==> Extracted to $InstallDir"
 
     # ---- smoke test ----
