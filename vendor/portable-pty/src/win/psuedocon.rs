@@ -134,21 +134,21 @@ fn load_conpty() -> ConPtyFuncs {
         )
     });
 
-    if std::env::var("HERDR_WINDOWS_CONPTY").as_deref() == Ok("system") {
-        log::warn!("HERDR_WINDOWS_CONPTY=system disables Herdr's bundled ConPTY");
+    if std::env::var("HIVE_WINDOWS_CONPTY").as_deref() == Ok("system") {
+        log::warn!("HIVE_WINDOWS_CONPTY=system disables hive's bundled ConPTY");
         return system;
     }
 
     match app_local_conpty_path() {
         Ok(Some(path)) => load_app_local_conpty(&path).unwrap_or_else(|error| {
             panic!(
-                "failed to load verified app-local ConPTY from {}: {error}; set HERDR_WINDOWS_CONPTY=system to use the Windows system ConPTY",
+                "failed to load verified app-local ConPTY from {}: {error}; set HIVE_WINDOWS_CONPTY=system to use the Windows system ConPTY",
                 path.display()
             )
         }),
         Ok(None) => system,
         Err(error) => panic!(
-            "Herdr's app-local ConPTY bundle is invalid: {}; reinstall Herdr or set HERDR_WINDOWS_CONPTY=system to use the Windows system ConPTY",
+            "hive's app-local ConPTY bundle is invalid: {}; reinstall hive or set HIVE_WINDOWS_CONPTY=system to use the Windows system ConPTY",
             error
         ),
     }
@@ -185,14 +185,13 @@ fn app_local_conpty_path() -> Result<Option<PathBuf>, String> {
     }
     reject_reparse_point(&bundle)?;
 
-    let mut expected = BTreeSet::from(["herdr-conpty.json".to_string()]);
+    let mut expected = BTreeSet::from(["hive-conpty.json".to_string()]);
     for (relative, expected_hash) in CONPTY_FILES {
         expected.insert((*relative).to_string());
         verify_bundle_file(&bundle, relative, expected_hash)?;
     }
-    let marker = bundle.join("herdr-conpty.json");
+    let marker = bundle.join("hive-conpty.json");
     verify_regular_file(&marker)?;
-
     let actual = bundle_files(&bundle)?;
     if actual != expected {
         return Err(format!(
