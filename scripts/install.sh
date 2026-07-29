@@ -21,7 +21,8 @@ main() {
     case "$OS" in
         Linux)  os="linux" ;;
         Darwin) os="macos" ;;
-        *)      err "unsupported OS: $OS (Linux and macOS only)" ;;
+        MSYS*|MINGW*|CYGWIN*) err "Git Bash / MSYS detected. Use PowerShell instead: irm https://PaRr0tBoY.github.io/product/Hive/install/install.ps1 | iex" ;; 
+        *)                    err "unsupported OS: $OS (Linux and macOS only)" ;;
     esac
 
     ARCH="$(uname -m)"
