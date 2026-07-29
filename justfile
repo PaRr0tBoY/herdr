@@ -130,7 +130,6 @@ release-prepare version:
     python3 scripts/changelog.py prepare --version {{version}}
     cp CHANGELOG.md docs/next/CHANGELOG.md
     sed -i.bak 's/^version = ".*"/version = "{{version}}"/' Cargo.toml && rm -f Cargo.toml.bak
-    cargo update -p herdr --offline
     just check
     git add CHANGELOG.md docs/next/CHANGELOG.md Cargo.toml Cargo.lock
     git diff --cached --quiet || git commit -m "release: v{{version}}"

@@ -900,7 +900,7 @@ pub fn run_terminal_session_control(
                         return;
                     }
                 }
-                Err(err) => eprintln!("herdr: terminal session control input ignored: {err}"),
+                Err(err) => eprintln!("hive: terminal session control input ignored: {err}"),
             }
         }
         let _ = write_to_server(&mut write_stream, &ClientMessage::Detach);
@@ -924,7 +924,7 @@ fn connect_terminal_session_stream(
     let mut stream = match crate::ipc::connect_local_stream(&socket_path) {
         Ok(stream) => stream,
         Err(err) => {
-            eprintln!("herdr: {}", ClientError::ConnectionFailed(err));
+            eprintln!("hive: {}", ClientError::ConnectionFailed(err));
             std::process::exit(1);
         }
     };
@@ -941,12 +941,12 @@ fn connect_terminal_session_stream(
         Ok(RenderEncoding::TerminalAnsi) => {}
         Ok(encoding) => {
             eprintln!(
-                "herdr: terminal session observe negotiated unsupported encoding {encoding:?}"
+                "hive: terminal session observe negotiated unsupported encoding {encoding:?}"
             );
             std::process::exit(1);
         }
         Err(err) => {
-            eprintln!("herdr: {err}");
+            eprintln!("hive: {err}");
             std::process::exit(1);
         }
     }
@@ -1151,7 +1151,7 @@ fn run_client_with_mode(
         Err(err) => {
             // Server unreachable — show clear error and exit.
             let client_err = ClientError::ConnectionFailed(err);
-            eprintln!("herdr: {client_err}");
+            eprintln!("hive: {client_err}");
             std::process::exit(1);
         }
     };
@@ -1172,7 +1172,7 @@ fn run_client_with_mode(
     ) {
         Ok(encoding) => encoding,
         Err(err) => {
-            eprintln!("herdr: {err}");
+            eprintln!("hive: {err}");
             std::process::exit(1);
         }
     };
@@ -1183,7 +1183,7 @@ fn run_client_with_mode(
             takeover,
         };
         if let Err(err) = write_to_server(&mut stream, &attach) {
-            eprintln!("herdr: failed to request terminal attach: {err}");
+            eprintln!("hive: failed to request terminal attach: {err}");
             std::process::exit(1);
         }
     }
@@ -1197,7 +1197,7 @@ fn run_client_with_mode(
         setup_terminal(mouse_capture)
     }
     .map_err(|err| {
-        eprintln!("herdr: failed to set up terminal: {err}");
+        eprintln!("hive: failed to set up terminal: {err}");
         err
     })?;
 
@@ -1248,7 +1248,7 @@ fn run_client_with_mode(
     drop(terminal_guard);
 
     if let Err(err) = result {
-        eprintln!("herdr: {err}");
+        eprintln!("hive: {err}");
         rt.shutdown_timeout(Duration::from_millis(100));
         crate::logging::shutdown("client");
 

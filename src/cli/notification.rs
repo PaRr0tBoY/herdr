@@ -132,9 +132,9 @@ fn parse_notification_sound(
 }
 
 fn print_notification_help() {
-    eprintln!("herdr notification commands:");
+    eprintln!("hive notification commands:");
     eprintln!(
-        "  herdr notification show <title> [--body TEXT] [--position top-left|top-right|bottom-left|bottom-right] [--sound none|done|request]"
+        "  hive notification show <title> [--body TEXT] [--position top-left|top-right|bottom-left|bottom-right] [--sound none|done|request]"
     );
 }
 

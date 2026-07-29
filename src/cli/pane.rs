@@ -1482,38 +1482,38 @@ fn pane_report_metadata(args: &[String]) -> std::io::Result<i32> {
 }
 
 fn print_pane_help() {
-    eprintln!("herdr pane commands:");
-    eprintln!("  herdr pane list [--workspace <workspace_id>]");
-    eprintln!("  herdr pane current [--pane ID|--current]");
-    eprintln!("  herdr pane get <pane_id>");
-    eprintln!("  herdr pane layout [--pane ID|--current]");
-    eprintln!("  herdr pane process-info [--pane ID|--current]");
-    eprintln!("  herdr pane neighbor --direction left|right|up|down [--pane ID|--current]");
-    eprintln!("  herdr pane edges [--pane ID|--current]");
-    eprintln!("  herdr pane focus --direction left|right|up|down [--pane ID|--current]");
+    eprintln!("hive pane commands:");
+    eprintln!("  hive pane list [--workspace <workspace_id>]");
+    eprintln!("  hive pane current [--pane ID|--current]");
+    eprintln!("  hive pane get <pane_id>");
+    eprintln!("  hive pane layout [--pane ID|--current]");
+    eprintln!("  hive pane process-info [--pane ID|--current]");
+    eprintln!("  hive pane neighbor --direction left|right|up|down [--pane ID|--current]");
+    eprintln!("  hive pane edges [--pane ID|--current]");
+    eprintln!("  hive pane focus --direction left|right|up|down [--pane ID|--current]");
     eprintln!(
-        "  herdr pane resize --direction left|right|up|down [--amount FLOAT] [--pane ID|--current]"
+        "  hive pane resize --direction left|right|up|down [--amount FLOAT] [--pane ID|--current]"
     );
-    eprintln!("  herdr pane zoom [<pane_id>|--pane ID|--current] [--toggle|--on|--off]");
-    eprintln!("  herdr pane rename <pane_id> <label>|--clear");
-    eprintln!("  herdr pane read <pane_id> [--source visible|recent|recent-unwrapped] [--lines N] [--format text|ansi] [--ansi]");
+    eprintln!("  hive pane zoom [<pane_id>|--pane ID|--current] [--toggle|--on|--off]");
+    eprintln!("  hive pane rename <pane_id> <label>|--clear");
+    eprintln!("  hive pane read <pane_id> [--source visible|recent|recent-unwrapped] [--lines N] [--format text|ansi] [--ansi]");
     eprintln!(
-        "  herdr pane split [<pane_id>|--pane ID|--current] --direction right|down [--ratio FLOAT] [--cwd PATH] [--env KEY=VALUE] [--focus] [--no-focus]"
+        "  hive pane split [<pane_id>|--pane ID|--current] --direction right|down [--ratio FLOAT] [--cwd PATH] [--env KEY=VALUE] [--focus] [--no-focus]"
     );
-    eprintln!("  herdr pane swap --direction left|right|up|down [--pane ID|--current]");
-    eprintln!("  herdr pane swap --source-pane ID --target-pane ID");
-    eprintln!("  herdr pane move <pane_id> --tab <tab_id> --split right|down [--target-pane ID] [--ratio FLOAT] [--focus|--no-focus]");
-    eprintln!("  herdr pane move <pane_id> --new-tab [--workspace ID] [--label TEXT] [--focus|--no-focus]");
-    eprintln!("  herdr pane move <pane_id> --new-workspace [--label TEXT] [--tab-label TEXT] [--focus|--no-focus]");
-    eprintln!("  herdr pane close <pane_id>");
-    eprintln!("  herdr pane send-text <pane_id> <text>");
-    eprintln!("  herdr pane send-keys <pane_id> <key> [key ...]");
-    eprintln!("  herdr pane wait-output <pane_id> (--match TEXT | --regex PATTERN) [--source visible|recent|recent-unwrapped] [--lines N] [--timeout MS] [--raw]");
-    eprintln!("  herdr pane report-agent <pane_id> --source ID --agent LABEL --state idle|working|blocked|unknown [--message TEXT] [--seq N] [--agent-session-id ID] [--agent-session-path PATH]");
-    eprintln!("  herdr pane report-agent-session <pane_id> --source ID --agent LABEL [--seq N] [--agent-session-id ID] [--agent-session-path PATH]");
-    eprintln!("  herdr pane release-agent <pane_id> --source ID --agent LABEL [--seq N]");
-    eprintln!("  herdr pane report-metadata <pane_id> --source ID [--agent LABEL] [--applies-to-source ID] [--title TEXT|--clear-title] [--display-agent TEXT|--clear-display-agent] [--state-label STATUS=TEXT] [--clear-state-labels] [--token NAME=VALUE] [--clear-token NAME] [--seq N] [--ttl-ms N]");
-    eprintln!("  herdr pane run <pane_id> <command>");
+    eprintln!("  hive pane swap --direction left|right|up|down [--pane ID|--current]");
+    eprintln!("  hive pane swap --source-pane ID --target-pane ID");
+    eprintln!("  hive pane move <pane_id> --tab <tab_id> --split right|down [--target-pane ID] [--ratio FLOAT] [--focus|--no-focus]");
+    eprintln!("  hive pane move <pane_id> --new-tab [--workspace ID] [--label TEXT] [--focus|--no-focus]");
+    eprintln!("  hive pane move <pane_id> --new-workspace [--label TEXT] [--tab-label TEXT] [--focus|--no-focus]");
+    eprintln!("  hive pane close <pane_id>");
+    eprintln!("  hive pane send-text <pane_id> <text>");
+    eprintln!("  hive pane send-keys <pane_id> <key> [key ...]");
+    eprintln!("  hive pane wait-output <pane_id> (--match TEXT | --regex PATTERN) [--source visible|recent|recent-unwrapped] [--lines N] [--timeout MS] [--raw]");
+    eprintln!("  hive pane report-agent <pane_id> --source ID --agent LABEL --state idle|working|blocked|unknown [--message TEXT] [--seq N] [--agent-session-id ID] [--agent-session-path PATH]");
+    eprintln!("  hive pane report-agent-session <pane_id> --source ID --agent LABEL [--seq N] [--agent-session-id ID] [--agent-session-path PATH]");
+    eprintln!("  hive pane release-agent <pane_id> --source ID --agent LABEL [--seq N]");
+    eprintln!("  hive pane report-metadata <pane_id> --source ID [--agent LABEL] [--applies-to-source ID] [--title TEXT|--clear-title] [--display-agent TEXT|--clear-display-agent] [--state-label STATUS=TEXT] [--clear-state-labels] [--token NAME=VALUE] [--clear-token NAME] [--seq N] [--ttl-ms N]");
+    eprintln!("  hive pane run <pane_id> <command>");
 }
 
 #[cfg(test)]

@@ -28,9 +28,9 @@ const STABLE_UPDATE_MANIFEST_URL: &str =
 const PREVIEW_UPDATE_MANIFEST_URL: &str =
     "https://api.github.com/repos/PaRr0tBoY/herdr/releases/latest";
 const HOMEBREW_FORMULA_API_URL: &str = "https://formulae.brew.sh/api/formula/herdr.json";
-const HIVE_UPDATE_COMMAND: &str = "herdr update";
-const HOMEBREW_UPDATE_COMMAND: &str = "brew update && brew upgrade herdr";
-const MISE_UPDATE_COMMAND: &str = "mise upgrade herdr";
+const HIVE_UPDATE_COMMAND: &str = "hive update";
+const HOMEBREW_UPDATE_COMMAND: &str = "brew update && brew upgrade hive";
+const MISE_UPDATE_COMMAND: &str = "mise upgrade hive";
 const NIX_UPDATE_COMMAND: &str = "update through Nix";
 const MISE_INSTALLS_DIR_ENV: &str = "MISE_INSTALLS_DIR";
 const FAKE_UPDATE_VERSION_ENV: &str = "HIVE_FAKE_UPDATE_VERSION";
@@ -665,18 +665,18 @@ fn install_windows_update_with_installer(
 }
 
 #[cfg(windows)]
-fn windows_installed_herdr_exe_path() -> Result<PathBuf, String> {
+fn windows_installed_hive_exe_path() -> Result<PathBuf, String> {
     if let Some(install_dir) = env::var_os("HIVE_INSTALL_DIR").filter(|value| !value.is_empty()) {
-        return Ok(PathBuf::from(install_dir).join("herdr.exe"));
+        return Ok(PathBuf::from(install_dir).join("hive.exe"));
     }
 
     let local_app_data = env::var_os("LOCALAPPDATA")
-        .ok_or("LOCALAPPDATA is not set; cannot locate Herdr install")?;
+        .ok_or("LOCALAPPDATA is not set; cannot locate Hive install")?;
     Ok(PathBuf::from(local_app_data)
         .join("Programs")
-        .join("Herdr")
+        .join("Hive")
         .join("bin")
-        .join("herdr.exe"))
+        .join("hive.exe"))
 }
 
 // ---------------------------------------------------------------------------
@@ -2030,7 +2030,7 @@ pub fn self_update(options: SelfUpdateOptions) -> Result<Version, String> {
             tracing::debug!(sha256 = %sha256, "selected Windows update asset has checksum");
         }
         install_windows_update_with_installer(channel, release.build_id.as_deref())?;
-        let updated_exe = windows_installed_herdr_exe_path()?;
+        let updated_exe = windows_installed_hive_exe_path()?;
         eprintln!("installed {}", release.label());
         print_outdated_integration_notice_with_updated_binary(&updated_exe);
         eprintln!(

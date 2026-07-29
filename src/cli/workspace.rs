@@ -238,12 +238,12 @@ fn workspace_close(args: &[String]) -> std::io::Result<i32> {
 }
 
 fn print_workspace_help() {
-    eprintln!("herdr workspace commands:");
-    eprintln!("  herdr workspace list");
-    eprintln!("  herdr workspace create [--cwd PATH] [--label TEXT] [--env KEY=VALUE] [--focus] [--no-focus]");
-    eprintln!("  herdr workspace get <workspace_id>");
-    eprintln!("  herdr workspace focus <workspace_id>");
-    eprintln!("  herdr workspace rename <workspace_id> <label>");
-    eprintln!("  herdr workspace report-metadata <workspace_id> --source ID [--token NAME=VALUE] [--clear-token NAME] [--seq N] [--ttl-ms N]");
-    eprintln!("  herdr workspace close <workspace_id>");
+    eprintln!("hive workspace commands:");
+    eprintln!("  hive workspace list");
+    eprintln!("  hive workspace create [--cwd PATH] [--label TEXT] [--env KEY=VALUE] [--focus] [--no-focus]");
+    eprintln!("  hive workspace get <workspace_id>");
+    eprintln!("  hive workspace focus <workspace_id>");
+    eprintln!("  hive workspace rename <workspace_id> <label>");
+    eprintln!("  hive workspace report-metadata <workspace_id> --source ID [--token NAME=VALUE] [--clear-token NAME] [--seq N] [--ttl-ms N]");
+    eprintln!("  hive workspace close <workspace_id>");
 }

@@ -112,7 +112,7 @@ fn agent_explain(args: &[String]) -> std::io::Result<i32> {
             return Ok(2);
         }
         let Some(agent_label) = agent else {
-            eprintln!("herdr agent explain --file requires --agent LABEL");
+            eprintln!("hive agent explain --file requires --agent LABEL");
             return Ok(2);
         };
         let content = std::fs::read_to_string(path)?;
@@ -787,22 +787,22 @@ fn agent_read(args: &[String]) -> std::io::Result<i32> {
 }
 
 fn print_agent_help() {
-    eprintln!("herdr agent commands:");
-    eprintln!("  herdr agent list");
-    eprintln!("  herdr agent get <target>");
-    eprintln!("  herdr agent read <target> [--source visible|recent|recent-unwrapped|detection] [--lines N] [--format text|ansi] [--ansi]");
-    eprintln!("  herdr agent send-keys <target> <key> [key ...]");
-    eprintln!("  herdr agent prompt <target> <text> [--wait] [--until STATUS]... [--timeout MS]");
-    eprintln!("  herdr agent rename <target> <name>|--clear");
-    eprintln!("  herdr agent focus <target>");
-    eprintln!("  herdr agent wait <target> [--until STATUS]... [--timeout MS]");
-    eprintln!("  herdr agent attach <target> [--takeover]");
+    eprintln!("hive agent commands:");
+    eprintln!("  hive agent list");
+    eprintln!("  hive agent get <target>");
+    eprintln!("  hive agent read <target> [--source visible|recent|recent-unwrapped|detection] [--lines N] [--format text|ansi] [--ansi]");
+    eprintln!("  hive agent send-keys <target> <key> [key ...]");
+    eprintln!("  hive agent prompt <target> <text> [--wait] [--until STATUS]... [--timeout MS]");
+    eprintln!("  hive agent rename <target> <name>|--clear");
+    eprintln!("  hive agent focus <target>");
+    eprintln!("  hive agent wait <target> [--until STATUS]... [--timeout MS]");
+    eprintln!("  hive agent attach <target> [--takeover]");
     eprintln!(
-        "  herdr agent start <name> --kind KIND --pane ID [--timeout MS] [-- <agent-args...>]"
+        "  hive agent start <name> --kind KIND --pane ID [--timeout MS] [-- <agent-args...>]"
     );
-    eprintln!("  herdr agent explain <target> [--json|--format text|json] [--verbose]");
+    eprintln!("  hive agent explain <target> [--json|--format text|json] [--verbose]");
     eprintln!(
-        "  herdr agent explain --file PATH --agent LABEL [--json|--format text|json] [--verbose]"
+        "  hive agent explain --file PATH --agent LABEL [--json|--format text|json] [--verbose]"
     );
     eprintln!("  targets accept unique agent names and pane ids that currently host agents");
     eprintln!("  kinds: {}", super::spec::agent_kind_values().join("|"));

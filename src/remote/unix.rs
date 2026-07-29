@@ -158,7 +158,7 @@ pub(crate) fn run_remote(remote: RemoteLaunch) -> io::Result<()> {
     let local_socket = local_forward_socket_path(&remote.target, &session_name);
     let program = std::env::args()
         .next()
-        .unwrap_or_else(|| "herdr".to_string());
+        .unwrap_or_else(|| "hive".to_string());
     let reattach_command = reattach_command(
         &program,
         &remote.target,
@@ -905,7 +905,7 @@ fn remote_binary_matches(ssh: &RemoteSsh, remote_herdr: &RemoteHerdr) -> io::Res
     let mut lines = stdout.lines();
     let version = lines.next().unwrap_or_default().trim();
     let status = lines.next().unwrap_or_default();
-    Ok(version == format!("herdr {}", current_version())
+    Ok(version == format!("hive {}", current_version())
         && parse_client_status_json(status)
             .map(|status| status.protocol == CURRENT_PROTOCOL)
             .unwrap_or(false))
@@ -1441,7 +1441,7 @@ fn warn_if_remote_bin_not_on_path(ssh: &RemoteSsh) -> io::Result<()> {
     }
 
     eprintln!(
-        "herdr: installed remote binary to ~/.local/bin/herdr, but the remote shell does not resolve `herdr` to that path"
+        "hive: installed remote binary to ~/.local/bin/hive, but the remote shell does not resolve `hive` to that path"
     );
     Ok(())
 }
@@ -1451,7 +1451,7 @@ fn remote_shell_resolves_managed_install(stdout: &str) -> bool {
         .lines()
         .next()
         .map(str::trim)
-        .is_some_and(|path| path.ends_with("/.local/bin/herdr"))
+        .is_some_and(|path| path.ends_with("/.local/bin/hive"))
 }
 
 fn download_release_asset(platform: &RemotePlatform) -> io::Result<InstallSource> {
@@ -1459,7 +1459,7 @@ fn download_release_asset(platform: &RemotePlatform) -> io::Result<InstallSource
     let asset = remote_release_asset(&asset_key)?;
 
     let dir = private_download_dir(&asset_key)?;
-    let path = dir.join("herdr.tmp");
+    let path = dir.join("hive.tmp");
     let status = crate::noninteractive_process::curl_command()
         .args(["-sfL", "--max-time", "120", "-o"])
         .arg(&path)
@@ -1651,7 +1651,7 @@ fn reattach_command(
     keybindings: RemoteKeybindings,
     live_handoff: bool,
 ) -> String {
-    let program = if program.is_empty() { "herdr" } else { program };
+    let program = if program.is_empty() { "hive" } else { program };
     let mut command = format!("{} --remote {}", shell_quote(program), shell_quote(target));
     if keybindings != RemoteKeybindings::Local {
         command.push_str(" --remote-keybindings ");
@@ -1721,7 +1721,7 @@ impl SshStdioBridge {
                     Ok((stream, _addr)) => {
                         if let Err(err) = stream.set_nonblocking(false) {
                             eprintln!(
-                                "herdr: remote bridge failed to prepare client socket: {err}"
+                                "hive: remote bridge failed to prepare client socket: {err}"
                             );
                             continue;
                         }
@@ -1732,14 +1732,14 @@ impl SshStdioBridge {
                             &session_name,
                             thread_ssh_options.as_ref(),
                         ) {
-                            eprintln!("herdr: remote bridge failed: {err}");
+                            eprintln!("hive: remote bridge failed: {err}");
                         }
                     }
                     Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
                         thread::sleep(BRIDGE_ACCEPT_POLL);
                     }
                     Err(err) => {
-                        eprintln!("herdr: remote bridge listener failed: {err}");
+                        eprintln!("hive: remote bridge listener failed: {err}");
                         break;
                     }
                 }

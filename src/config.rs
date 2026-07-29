@@ -6,6 +6,7 @@ mod model;
 mod sidebar;
 mod sound;
 mod theme;
+mod migrate;
 
 pub use self::{
     io::{
@@ -34,6 +35,7 @@ pub use self::{
 
 pub(crate) use self::io::platform_config_dir;
 pub(crate) use self::io::upsert_top_level_bool;
+pub(crate) use self::migrate::migrate_from_herdr;
 pub(crate) use self::keybinds::parse_key_combo;
 
 pub const CONFIG_PATH_ENV_VAR: &str = "HIVE_CONFIG_PATH";

@@ -283,15 +283,15 @@ fn worktree_remove(args: &[String]) -> std::io::Result<i32> {
 }
 
 fn print_worktree_help() {
-    eprintln!("herdr worktree commands:");
-    eprintln!("  herdr worktree list [--workspace ID | --cwd PATH] [--json]");
+    eprintln!("hive worktree commands:");
+    eprintln!("  hive worktree list [--workspace ID | --cwd PATH] [--json]");
     eprintln!(
-        "  herdr worktree create [--workspace ID | --cwd PATH] [--branch NAME] [--base REF] [--path PATH] [--label TEXT] [--focus] [--no-focus] [--json]"
+        "  hive worktree create [--workspace ID | --cwd PATH] [--branch NAME] [--base REF] [--path PATH] [--label TEXT] [--focus] [--no-focus] [--json]"
     );
     eprintln!(
-        "  herdr worktree open [--workspace ID | --cwd PATH] (--path PATH | --branch NAME) [--label TEXT] [--focus] [--no-focus] [--json]"
+        "  hive worktree open [--workspace ID | --cwd PATH] (--path PATH | --branch NAME) [--label TEXT] [--focus] [--no-focus] [--json]"
     );
-    eprintln!("  herdr worktree remove --workspace ID [--force] [--json]");
+    eprintln!("  hive worktree remove --workspace ID [--force] [--json]");
 }
 
 fn normalize_path_arg(value: &str) -> std::io::Result<String> {

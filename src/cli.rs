@@ -235,9 +235,9 @@ fn channel_set_install_action(
 }
 
 fn print_channel_help() {
-    eprintln!("herdr channel commands:");
-    eprintln!("  herdr channel show                  print the configured update channel");
-    eprintln!("  herdr channel set <stable|preview>  choose the update channel");
+    eprintln!("hive channel commands:");
+    eprintln!("  hive channel show                  print the configured update channel");
+    eprintln!("  hive channel set <stable|preview>  choose the update channel");
 }
 
 fn run_config_command(args: &[String]) -> std::io::Result<i32> {
@@ -929,27 +929,27 @@ fn print_session_error(code: &str, message: &str) {
 }
 
 fn print_config_help() {
-    eprintln!("herdr config commands:");
-    eprintln!("  herdr config check  validate config.toml and print diagnostics");
-    eprintln!("  herdr config reset-keys  back up config.toml and remove custom keybindings");
+    eprintln!("hive config commands:");
+    eprintln!("  hive config check  validate config.toml and print diagnostics");
+    eprintln!("  hive config reset-keys  back up config.toml and remove custom keybindings");
 }
 
 fn print_terminal_help() {
-    eprintln!("herdr terminal commands:");
-    eprintln!("  herdr terminal attach <terminal_id> [--takeover]");
-    eprintln!("  herdr terminal session control <target> [--takeover] [--cols N] [--rows N]");
-    eprintln!("  herdr terminal session observe <target> [--cols N] [--rows N]");
-    eprintln!("  herdr terminal title set <title>");
-    eprintln!("  herdr terminal title clear");
+    eprintln!("hive terminal commands:");
+    eprintln!("  hive terminal attach <terminal_id> [--takeover]");
+    eprintln!("  hive terminal session control <target> [--takeover] [--cols N] [--rows N]");
+    eprintln!("  hive terminal session observe <target> [--cols N] [--rows N]");
+    eprintln!("  hive terminal title set <title>");
+    eprintln!("  hive terminal title clear");
     eprintln!("  detach from direct attach with ctrl+b q; send literal ctrl+b with ctrl+b ctrl+b");
 }
 
 fn print_session_help() {
-    eprintln!("herdr session commands:");
-    eprintln!("  herdr session list [--json]");
-    eprintln!("  herdr session attach <name>");
-    eprintln!("  herdr session stop <name> [--json]");
-    eprintln!("  herdr session delete <name> [--json]");
+    eprintln!("hive session commands:");
+    eprintln!("  hive session list [--json]");
+    eprintln!("  hive session attach <name>");
+    eprintln!("  hive session stop <name> [--json]");
+    eprintln!("  hive session delete <name> [--json]");
     eprintln!("  use 'default' as <name> to target the default session for stop");
 }
 

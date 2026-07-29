@@ -458,6 +458,9 @@ fn exit_if_nested_disabled(config: &config::Config) {
 }
 
 fn main() -> io::Result<()> {
+    // Migrate old herdr config/state to hive on first boot.
+    crate::config::migrate_from_herdr();
+
     // Panic hook: write panic info to temp file for post-mortem debugging.
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
@@ -473,7 +476,7 @@ fn main() -> io::Result<()> {
             .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
             .unwrap_or_else(|| "unknown location".to_string());
         let _ = std::fs::write(
-            std::env::temp_dir().join("herdr-panic.txt"),
+            std::env::temp_dir().join("hive-panic.txt"),
             format!("PANIC: {msg}\nLocation: {location}\n"),
         );
         default_hook(info);
@@ -560,29 +563,29 @@ fn main() -> io::Result<()> {
     }
 
     if args.iter().any(|a| a == "--help" || a == "-h") {
-        println!("herdr — terminal workspace manager for AI coding agents");
+        println!("hive — terminal workspace manager for AI coding agents");
         println!();
-        println!("Usage: herdr [options]");
-        println!("       herdr --session <name> [options]");
-        println!("       herdr --remote <ssh-target> [--session <name>]");
-        println!("       herdr session attach <name>");
-        println!("       herdr completion zsh");
-        println!("       herdr update [--handoff]");
-        println!("       herdr channel set <stable|preview>");
-        println!("       herdr server stop");
-        println!("       herdr server reload-config");
-        println!("       herdr api <subcommand> ...");
-        println!("       herdr completion <shell>");
-        println!("       herdr config <subcommand> ...");
-        println!("       herdr channel <subcommand> ...");
-        println!("       herdr workspace <subcommand> ...");
-        println!("       herdr worktree <subcommand> ...");
-        println!("       herdr tab <subcommand> ...");
-        println!("       herdr notification <subcommand> ...");
-        println!("       herdr agent <subcommand> ...");
-        println!("       herdr pane <subcommand> ...");
-        println!("       herdr session <subcommand> ...");
-        println!("       herdr integration <subcommand> ...");
+        println!("Usage: hive [options]");
+        println!("       hive --session <name> [options]");
+        println!("       hive --remote <ssh-target> [--session <name>]");
+        println!("       hive session attach <name>");
+        println!("       hive completion zsh");
+        println!("       hive update [--handoff]");
+        println!("       hive channel set <stable|preview>");
+        println!("       hive server stop");
+        println!("       hive server reload-config");
+        println!("       hive api <subcommand> ...");
+        println!("       hive completion <shell>");
+        println!("       hive config <subcommand> ...");
+        println!("       hive channel <subcommand> ...");
+        println!("       hive workspace <subcommand> ...");
+        println!("       hive worktree <subcommand> ...");
+        println!("       hive tab <subcommand> ...");
+        println!("       hive notification <subcommand> ...");
+        println!("       hive agent <subcommand> ...");
+        println!("       hive pane <subcommand> ...");
+        println!("       hive session <subcommand> ...");
+        println!("       hive integration <subcommand> ...");
         println!();
         println!("Common commands:");
         for (command, description) in [
@@ -610,40 +613,40 @@ fn main() -> io::Result<()> {
                 "Back up config.toml and remove custom keybindings",
             ),
             (
-                "herdr channel <subcommand>",
+                "hive channel <subcommand>",
                 "Manage the stable or preview update channel",
             ),
             (
-                "herdr api <subcommand>",
+                "hive api <subcommand>",
                 "Inspect socket API metadata and live runtime state",
             ),
             (
-                "herdr workspace <subcommand>",
+                "hive workspace <subcommand>",
                 "Workspace helpers over the socket API",
             ),
             (
-                "herdr worktree <subcommand>",
+                "hive worktree <subcommand>",
                 "Git worktree helpers over the socket API",
             ),
-            ("herdr tab <subcommand>", "Tab helpers over the socket API"),
+            ("hive tab <subcommand>", "Tab helpers over the socket API"),
             (
-                "herdr notification <subcommand>",
+                "hive notification <subcommand>",
                 "Notification helpers over the socket API",
             ),
             (
-                "herdr agent <subcommand>",
+                "hive agent <subcommand>",
                 "Agent/terminal helpers over the socket API",
             ),
             (
-                "herdr pane <subcommand>",
+                "hive pane <subcommand>",
                 "Pane control helpers over the socket API",
             ),
             (
-                "herdr session <subcommand>",
+                "hive session <subcommand>",
                 "Manage named persistent sessions",
             ),
             (
-                "herdr integration <subcommand>",
+                "hive integration <subcommand>",
                 "Manage built-in agent integrations",
             ),
         ] {
@@ -651,12 +654,12 @@ fn main() -> io::Result<()> {
         }
         println!();
         println!("Advanced commands:");
-        println!("  {:<32} Run as headless server", "herdr server");
+        println!("  {:<32} Run as headless server", "hive server");
         println!();
         println!("Options:");
         println!("  --no-session        Run monolithically (no server/client, escape hatch)");
         println!("  --session <name>    Use or create a named persistent session");
-        println!("  --remote <target>   Attach through SSH to a remote Herdr server");
+        println!("  --remote <target>   Attach through SSH to a remote Hive server");
         println!("  --remote-keybindings <local|server>");
         println!("                      Keybindings for --remote app attach (default: local)");
         println!("  --handoff           Opt into live handoff for update or remote attach");
@@ -669,12 +672,12 @@ fn main() -> io::Result<()> {
         println!("Logs:   {}", logging::help_log_paths_summary());
         println!("Env:    HIVE_CONFIG_PATH overrides config file path");
         println!("Home:   https://herdr.dev");
-        println!("Skill:  herdr --skill prints agent instructions for driving herdr from a pane");
+        println!("Skill:  hive --skill prints agent instructions for driving hive from a pane");
         return Ok(());
     }
 
     if args.iter().any(|a| a == "--version" || a == "-V") {
-        println!("herdr {}", crate::build_info::version());
+        println!("hive {}", crate::build_info::version());
         return Ok(());
     }
 
@@ -750,7 +753,7 @@ fn main() -> io::Result<()> {
     // Check if a server is running, spawn one if needed, then attach as client.
     if !no_session {
         if let Err(err) = server::autodetect::auto_detect_launch() {
-            eprintln!("herdr: {err}");
+            eprintln!("hive: {err}");
             std::process::exit(1);
         }
         return Ok(());

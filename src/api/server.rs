@@ -126,7 +126,7 @@ pub fn start_server_with_capabilities(
 fn prepare_socket_path(path: &Path) -> std::io::Result<()> {
     crate::ipc::prepare_socket_path(path, |path| {
         format!(
-            "herdr is already running (socket busy at {})",
+            "hive is already running (socket busy at {})",
             path.display()
         )
     })
