@@ -243,7 +243,7 @@ const DEFAULT_CONFIG: &str = r##"# hive configuration
 # agents = ""     # e.g. "alt" makes alt+1..9 focus agent rows directly
 
 # [worktrees]
-# directory = "~/.herdr/worktrees"
+# directory = "~/.hive/worktrees"
 
 [ui]
 # Sidebar width (auto-scaled based on workspace names, this sets the default)
@@ -261,11 +261,11 @@ const DEFAULT_CONFIG: &str = r##"# hive configuration
 # Collapsed sidebar presentation: "compact" keeps the narrow status rail, "hidden" uses zero width.
 # sidebar_collapsed_mode = "compact"
 
-# Terminal width at or below which Herdr uses the mobile single-column layout.
+# Terminal width at or below which Hive uses the mobile single-column layout.
 # Increase this for foldables, tablets, or wide phone terminals.
 # mobile_width_threshold = 64
 
-# Capture mouse input for Herdr's mouse UI.
+# Capture mouse input for Hive's mouse UI.
 # Set false to let the terminal handle normal clicks, such as Cmd-clicking URLs.
 # Pane apps like lazygit and btop can still receive mouse when they request it.
 # mouse_capture = true
@@ -353,7 +353,7 @@ const DEFAULT_CONFIG: &str = r##"# hive configuration
 # delivery = "off"
 # delay_seconds = 1
 
-[ui.toast.herdr]
+[ui.toast.hive]
 # position = "bottom-right"
 
 [ui.toast.clipboard]

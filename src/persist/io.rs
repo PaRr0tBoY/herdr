@@ -218,7 +218,7 @@ mod tests {
 
     fn temp_session_path(name: &str) -> PathBuf {
         let unique = format!(
-            "herdr-session-tests-{}-{}-{}",
+            "hive-session-tests-{}-{}-{}",
             name,
             std::process::id(),
             std::time::SystemTime::now()

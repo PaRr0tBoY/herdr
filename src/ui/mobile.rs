@@ -1443,7 +1443,7 @@ mod tests {
     #[tokio::test]
     async fn mobile_header_uses_live_root_runtime_cwd_for_workspace_label() {
         let unique = format!(
-            "herdr-mobile-header-runtime-cwd-{}-{}",
+            "hive-mobile-header-runtime-cwd-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

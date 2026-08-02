@@ -50,7 +50,7 @@ pub(crate) struct ReceivedHandoff {
 
 #[cfg(unix)]
 pub(crate) fn handoff_socket_path() -> PathBuf {
-    crate::session::data_dir().join(format!("herdr-handoff-{}.sock", std::process::id()))
+    crate::session::data_dir().join(format!("hive-handoff-{}.sock", std::process::id()))
 }
 
 #[cfg(unix)]
@@ -66,7 +66,7 @@ pub(crate) fn spawn_handoff_import(
         fallback_exe = std::env::current_exe().map_err(|err| {
             io::Error::new(
                 err.kind(),
-                format!("failed to determine herdr executable path: {err}"),
+                format!("failed to determine hive executable path: {err}"),
             )
         })?;
         &fallback_exe

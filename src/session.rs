@@ -482,7 +482,7 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        std::env::temp_dir().join(format!("herdr-{name}-{}-{nanos}", std::process::id()))
+        std::env::temp_dir().join(format!("hive-{name}-{}-{nanos}", std::process::id()))
     }
 
     #[cfg(unix)]
@@ -750,7 +750,7 @@ mod tests {
     fn configure_from_args_maps_default_session_name_to_default_path() {
         let _guard = env_lock().lock().unwrap();
         let config_home =
-            std::env::temp_dir().join(format!("herdr-session-default-{}", std::process::id()));
+            std::env::temp_dir().join(format!("hive-session-default-{}", std::process::id()));
         std::env::set_var("XDG_CONFIG_HOME", &config_home);
         std::env::set_var(SESSION_ENV_VAR, "work");
         clear_explicit_session_for_test();
@@ -772,7 +772,7 @@ mod tests {
             active_api_socket_path(),
             config_home
                 .join(crate::config::app_dir_name())
-                .join("herdr.sock")
+                .join("hive.sock")
         );
         std::env::remove_var("XDG_CONFIG_HOME");
         std::env::remove_var(SESSION_ENV_VAR);
@@ -803,7 +803,7 @@ mod tests {
     fn env_default_session_name_uses_default_path() {
         let _guard = env_lock().lock().unwrap();
         let config_home =
-            std::env::temp_dir().join(format!("herdr-env-session-default-{}", std::process::id()));
+            std::env::temp_dir().join(format!("hive-env-session-default-{}", std::process::id()));
         std::env::set_var("XDG_CONFIG_HOME", &config_home);
         std::env::remove_var(crate::api::SOCKET_PATH_ENV_VAR);
         std::env::set_var(SESSION_ENV_VAR, DEFAULT_SESSION_NAME);
@@ -823,7 +823,7 @@ mod tests {
             active_api_socket_path(),
             config_home
                 .join(crate::config::app_dir_name())
-                .join("herdr.sock")
+                .join("hive.sock")
         );
         std::env::remove_var("XDG_CONFIG_HOME");
         std::env::remove_var(SESSION_ENV_VAR);
@@ -883,13 +883,13 @@ mod tests {
     #[test]
     fn active_restart_after_update_guidance_respects_socket_override() {
         let _guard = env_lock().lock().unwrap();
-        std::env::set_var(crate::api::SOCKET_PATH_ENV_VAR, "/tmp/custom-herdr.sock");
+        std::env::set_var(crate::api::SOCKET_PATH_ENV_VAR, "/tmp/custom-hive.sock");
         std::env::remove_var(SESSION_ENV_VAR);
         clear_explicit_session_for_test();
 
         assert_eq!(
             active_restart_after_update_guidance(),
-            "Stop the old server to use the new version.\nStopping exits pane processes.\nRun `HIVE_SOCKET_PATH=/tmp/custom-herdr.sock hive server stop`, then restart Herdr with the same socket override."
+            "Stop the old server to use the new version.\nStopping exits pane processes.\nRun `HIVE_SOCKET_PATH=/tmp/custom-hive.sock hive server stop`, then restart Herdr with the same socket override."
         );
 
         std::env::remove_var(crate::api::SOCKET_PATH_ENV_VAR);
@@ -899,7 +899,7 @@ mod tests {
     fn explicit_session_socket_ignores_inherited_socket_override() {
         let _guard = env_lock().lock().unwrap();
         let config_home =
-            std::env::temp_dir().join(format!("herdr-session-precedence-{}", std::process::id()));
+            std::env::temp_dir().join(format!("hive-session-precedence-{}", std::process::id()));
         std::env::set_var("XDG_CONFIG_HOME", &config_home);
         std::env::set_var(SESSION_ENV_VAR, "work");
         EXPLICIT_SESSION_REQUESTED.store(true, Ordering::Relaxed);
@@ -913,7 +913,7 @@ mod tests {
                 .join(crate::config::app_dir_name())
                 .join("sessions")
                 .join("work")
-                .join("herdr.sock")
+                .join("hive.sock")
         );
         std::env::remove_var("XDG_CONFIG_HOME");
         std::env::remove_var(SESSION_ENV_VAR);
@@ -943,7 +943,7 @@ mod tests {
         let _guard = env_lock().lock().unwrap();
         std::env::set_var(SESSION_ENV_VAR, "bad/name");
         clear_explicit_session_for_test();
-        std::env::set_var(crate::api::SOCKET_PATH_ENV_VAR, "/tmp/herdr.sock");
+        std::env::set_var(crate::api::SOCKET_PATH_ENV_VAR, "/tmp/hive.sock");
         let args = vec![
             "herdr".to_string(),
             "workspace".to_string(),
@@ -954,7 +954,7 @@ mod tests {
 
         assert_eq!(cleaned, vec!["herdr", "workspace", "list"]);
         assert!(!explicit_session_requested());
-        assert_eq!(active_api_socket_path(), PathBuf::from("/tmp/herdr.sock"));
+        assert_eq!(active_api_socket_path(), PathBuf::from("/tmp/hive.sock"));
         assert_eq!(std::env::var(SESSION_ENV_VAR).as_deref(), Ok("bad/name"));
 
         std::env::remove_var(SESSION_ENV_VAR);
@@ -1037,7 +1037,7 @@ mod tests {
     fn list_sessions_skips_reserved_default_directory() {
         let _guard = env_lock().lock().unwrap();
         let config_home =
-            std::env::temp_dir().join(format!("herdr-session-list-{}", std::process::id()));
+            std::env::temp_dir().join(format!("hive-session-list-{}", std::process::id()));
         let sessions_dir = config_home
             .join(crate::config::app_dir_name())
             .join("sessions");

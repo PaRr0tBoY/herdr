@@ -89,6 +89,14 @@ pub fn is_reserved_native_state_source(source: &str, agent: &str) -> bool {
             | ("herdr:qodercli", "qodercli")
             | ("herdr:cursor", "cursor")
             | ("herdr:grok", "grok")
+            | ("hive:claude", "claude")
+            | ("hive:codex", "codex")
+            | ("hive:copilot", "copilot")
+            | ("hive:devin", "devin")
+            | ("hive:droid", "droid")
+            | ("hive:qodercli", "qodercli")
+            | ("hive:cursor", "cursor")
+            | ("hive:grok", "grok")
     )
 }
 
@@ -119,75 +127,90 @@ pub fn plan(source: &str, agent: &str, session_ref: &AgentSessionRef) -> Option<
     }
 
     let argv = match (source, agent, session_ref.kind) {
-        ("herdr:claude", "claude", AgentSessionRefKind::Id) => {
+        ("herdr:claude", "claude", AgentSessionRefKind::Id)
+        | ("hive:claude", "claude", AgentSessionRefKind::Id) => {
             vec![
                 "claude".into(),
                 "--resume".into(),
                 session_ref.value.clone(),
             ]
         }
-        ("herdr:codex", "codex", AgentSessionRefKind::Id) => {
+        ("herdr:codex", "codex", AgentSessionRefKind::Id)
+        | ("hive:codex", "codex", AgentSessionRefKind::Id) => {
             vec!["codex".into(), "resume".into(), session_ref.value.clone()]
         }
-        ("herdr:copilot", "copilot", AgentSessionRefKind::Id) => {
+        ("herdr:copilot", "copilot", AgentSessionRefKind::Id)
+        | ("hive:copilot", "copilot", AgentSessionRefKind::Id) => {
             vec!["copilot".into(), format!("--resume={}", session_ref.value)]
         }
-        ("herdr:devin", "devin", AgentSessionRefKind::Id) => {
+        ("herdr:devin", "devin", AgentSessionRefKind::Id)
+        | ("hive:devin", "devin", AgentSessionRefKind::Id) => {
             vec!["devin".into(), "--resume".into(), session_ref.value.clone()]
         }
-        ("herdr:droid", "droid", AgentSessionRefKind::Id) => {
+        ("herdr:droid", "droid", AgentSessionRefKind::Id)
+        | ("hive:droid", "droid", AgentSessionRefKind::Id) => {
             vec!["droid".into(), "--resume".into(), session_ref.value.clone()]
         }
-        ("herdr:kimi", "kimi", AgentSessionRefKind::Id) => {
+        ("herdr:kimi", "kimi", AgentSessionRefKind::Id)
+        | ("hive:kimi", "kimi", AgentSessionRefKind::Id) => {
             vec!["kimi".into(), "--session".into(), session_ref.value.clone()]
         }
-        ("herdr:mastracode", "mastracode", AgentSessionRefKind::Id) => {
+        ("herdr:mastracode", "mastracode", AgentSessionRefKind::Id)
+        | ("hive:mastracode", "mastracode", AgentSessionRefKind::Id) => {
             vec![
                 "mastracode".into(),
                 "--thread".into(),
                 session_ref.value.clone(),
             ]
         }
-        ("herdr:pi", "pi", AgentSessionRefKind::Path | AgentSessionRefKind::Id) => {
+        ("herdr:pi", "pi", AgentSessionRefKind::Path | AgentSessionRefKind::Id)
+        | ("hive:pi", "pi", AgentSessionRefKind::Path | AgentSessionRefKind::Id) => {
             vec!["pi".into(), "--session".into(), session_ref.value.clone()]
         }
-        ("herdr:omp", "omp", AgentSessionRefKind::Path | AgentSessionRefKind::Id) => {
+        ("herdr:omp", "omp", AgentSessionRefKind::Path | AgentSessionRefKind::Id)
+        | ("hive:omp", "omp", AgentSessionRefKind::Path | AgentSessionRefKind::Id) => {
             // omp resume is `-r, --resume=<value>` (ID prefix or path); it has no
             // `--session` flag, unlike pi.
             vec!["omp".into(), format!("--resume={}", session_ref.value)]
         }
-        ("herdr:hermes", "hermes", AgentSessionRefKind::Id) => {
+        ("herdr:hermes", "hermes", AgentSessionRefKind::Id)
+        | ("hive:hermes", "hermes", AgentSessionRefKind::Id) => {
             vec![
                 "hermes".into(),
                 "--resume".into(),
                 session_ref.value.clone(),
             ]
         }
-        ("herdr:opencode", "opencode", AgentSessionRefKind::Id) => {
+        ("herdr:opencode", "opencode", AgentSessionRefKind::Id)
+        | ("hive:opencode", "opencode", AgentSessionRefKind::Id) => {
             vec![
                 "opencode".into(),
                 "--session".into(),
                 session_ref.value.clone(),
             ]
         }
-        ("herdr:qodercli", "qodercli", AgentSessionRefKind::Id) => {
+        ("herdr:qodercli", "qodercli", AgentSessionRefKind::Id)
+        | ("hive:qodercli", "qodercli", AgentSessionRefKind::Id) => {
             vec![
                 "qodercli".into(),
                 "--resume".into(),
                 session_ref.value.clone(),
             ]
         }
-        ("herdr:kilo", "kilo", AgentSessionRefKind::Id) => {
+        ("herdr:kilo", "kilo", AgentSessionRefKind::Id)
+        | ("hive:kilo", "kilo", AgentSessionRefKind::Id) => {
             vec!["kilo".into(), "--session".into(), session_ref.value.clone()]
         }
-        ("herdr:cursor", "cursor", AgentSessionRefKind::Id) => {
+        ("herdr:cursor", "cursor", AgentSessionRefKind::Id)
+        | ("hive:cursor", "cursor", AgentSessionRefKind::Id) => {
             vec![
                 "cursor-agent".into(),
                 "--resume".into(),
                 session_ref.value.clone(),
             ]
         }
-        ("herdr:grok", "grok", AgentSessionRefKind::Id) => {
+        ("herdr:grok", "grok", AgentSessionRefKind::Id)
+        | ("hive:grok", "grok", AgentSessionRefKind::Id) => {
             vec!["grok".into(), "--resume".into(), session_ref.value.clone()]
         }
         _ => return None,
@@ -199,14 +222,6 @@ pub fn plan(source: &str, agent: &str, session_ref: &AgentSessionRef) -> Option<
         dedupe_key: dedupe_key(source, agent, session_ref),
     })
 }
-
-pub fn dedupe_key(source: &str, agent: &str, session_ref: &AgentSessionRef) -> String {
-    format!(
-        "{source}\u{0}{agent}\u{0}{:?}\u{0}{}",
-        session_ref.kind, session_ref.value
-    )
-}
-
 pub(crate) fn is_official_agent_source(source: &str, agent: &str) -> bool {
     matches!(
         (source, agent),
@@ -225,6 +240,28 @@ pub(crate) fn is_official_agent_source(source: &str, agent: &str) -> bool {
             | ("herdr:kilo", "kilo")
             | ("herdr:cursor", "cursor")
             | ("herdr:grok", "grok")
+            | ("hive:claude", "claude")
+            | ("hive:codex", "codex")
+            | ("hive:copilot", "copilot")
+            | ("hive:devin", "devin")
+            | ("hive:droid", "droid")
+            | ("hive:kimi", "kimi")
+            | ("hive:omp", "omp")
+            | ("hive:mastracode", "mastracode")
+            | ("hive:pi", "pi")
+            | ("hive:hermes", "hermes")
+            | ("hive:opencode", "opencode")
+            | ("hive:qodercli", "qodercli")
+            | ("hive:kilo", "kilo")
+            | ("hive:cursor", "cursor")
+            | ("hive:grok", "grok")
+    )
+}
+
+pub fn dedupe_key(source: &str, agent: &str, session_ref: &AgentSessionRef) -> String {
+    format!(
+        "{source}\u{0}{agent}\u{0}{:?}\u{0}{}",
+        session_ref.kind, session_ref.value
     )
 }
 

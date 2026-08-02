@@ -804,7 +804,7 @@ mod tests {
     #[tokio::test]
     async fn confirm_close_text_prefers_live_runtime_cwd_over_stale_terminal_cwd() {
         let root = std::env::temp_dir().join(format!(
-            "herdr-confirm-close-runtime-cwd-{}",
+            "hive-confirm-close-runtime-cwd-{}",
             std::process::id()
         ));
         let stale_cwd = root.join("original");

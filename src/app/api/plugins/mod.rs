@@ -732,7 +732,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_nanos())
             .unwrap_or(0);
-        std::env::temp_dir().join(format!("herdr-{name}-{}-{nanos}", std::process::id()))
+        std::env::temp_dir().join(format!("hive-{name}-{}-{nanos}", std::process::id()))
     }
 
     fn canonical_path_string(path: &std::path::Path) -> String {
@@ -765,14 +765,14 @@ mod tests {
 
     fn write_manifest(root: &std::path::Path) -> std::path::PathBuf {
         std::fs::create_dir_all(root).unwrap();
-        let manifest = root.join("herdr-plugin.toml");
+        let manifest = root.join("hive-plugin.toml");
         std::fs::write(
             &manifest,
             r#"
 id = "example.worktree-bootstrap"
 name = "Worktree Bootstrap"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 description = "Prepare new worktrees"
 platforms = ["linux", "macos", "windows"]
 
@@ -807,7 +807,7 @@ action = "bootstrap"
 
     fn write_manifest_content(root: &std::path::Path, content: &str) -> std::path::PathBuf {
         std::fs::create_dir_all(root).unwrap();
-        let manifest = root.join("herdr-plugin.toml");
+        let manifest = root.join("hive-plugin.toml");
         std::fs::write(&manifest, content).unwrap();
         manifest
     }
@@ -841,7 +841,7 @@ action = "bootstrap"
 id = "example.config-dirs"
 name = "Config Dirs"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos", "windows"]
 "#,
         );
@@ -876,7 +876,7 @@ platforms = ["linux", "macos", "windows"]
 id = "example.legacy-config"
 name = "Legacy Config"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos", "windows"]
 "#,
         );
@@ -975,7 +975,7 @@ platforms = ["linux", "macos", "windows"]
 id = "example.whitespace-argv"
 name = "Whitespace argv"
 version = "0.1.0"
-min_herdr_version = "0.7.0"
+min_hive_version = "0.7.0"
 platforms = ["linux", "macos"]
 
 [[panes]]
@@ -1003,7 +1003,7 @@ command = ["awk", "-F", "\t", " {print $1} "]
 id = "example.empty-command-{name}"
 name = "Empty command {name}"
 version = "0.1.0"
-min_herdr_version = "0.7.0"
+min_hive_version = "0.7.0"
 platforms = ["linux", "macos"]
 
 [[panes]]
@@ -1030,7 +1030,7 @@ command = {command}
 id = "example.event-whitespace-order"
 name = "Event whitespace order"
 version = "0.1.0"
-min_herdr_version = "0.7.0"
+min_hive_version = "0.7.0"
 platforms = ["linux", "macos"]
 
 [[events]]
@@ -1075,7 +1075,7 @@ command = ["echo", " a", "first "]
                 source: Some(PluginSourceInfo {
                     kind: PluginSourceKind::Github,
                     owner: Some("ogulcancelik".into()),
-                    repo: Some("herdr-plugin-examples".into()),
+                    repo: Some("hive-plugin-examples".into()),
                     subdir: Some("worktree-bootstrap".into()),
                     requested_ref: None,
                     resolved_commit: Some("abc123".into()),
@@ -1091,28 +1091,28 @@ command = ["echo", " a", "first "]
     }
 
     #[test]
-    fn link_rejects_invalid_min_herdr_versions() {
+    fn link_rejects_invalid_min_hive_versions() {
         let cases = [
             (
                 "plugin-missing-min-herdr",
                 r#"
 id = "example.missing-min-herdr"
-name = "Missing Min Herdr"
+name = "Missing Min Hive"
 version = "0.1.0"
 platforms = ["linux", "macos", "windows"]
 "#,
-                "invalid_plugin_min_herdr_version",
+                "invalid_plugin_min_hive_version",
             ),
             (
                 "plugin-invalid-min-herdr",
                 r#"
 id = "example.invalid-min-herdr"
-name = "Invalid Min Herdr"
+name = "Invalid Min Hive"
 version = "0.1.0"
-min_herdr_version = "soon"
+min_hive_version = "soon"
 platforms = ["linux", "macos", "windows"]
 "#,
-                "invalid_plugin_min_herdr_version",
+                "invalid_plugin_min_hive_version",
             ),
             (
                 "plugin-future-min-herdr",
@@ -1120,10 +1120,10 @@ platforms = ["linux", "macos", "windows"]
 id = "example.future-min-herdr"
 name = "Future Min Herdr"
 version = "0.1.0"
-min_herdr_version = "999.0.0"
+min_hive_version = "999.0.0"
 platforms = ["linux", "macos", "windows"]
 "#,
-                "plugin_requires_newer_herdr",
+                "plugin_requires_newer_hive",
             ),
             (
                 "plugin-non-popup-size",
@@ -1131,7 +1131,7 @@ platforms = ["linux", "macos", "windows"]
 id = "example.non-popup-size"
 name = "Non Popup Size"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos", "windows"]
 
 [[panes]]
@@ -1167,7 +1167,7 @@ command = ["echo", "board"]
 id = "example.duplicate"
 name = "Duplicate"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos", "windows"]
 
 [[actions]]
@@ -1196,7 +1196,7 @@ command = ["echo", "b"]
 id = "example.dotted-action"
 name = "Dotted Action"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos", "windows"]
 
 [[actions]]
@@ -1220,7 +1220,7 @@ command = ["echo", "build"]
 id = "example.duplicate-pane"
 name = "Duplicate Pane"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos", "windows"]
 
 [[panes]]
@@ -1249,7 +1249,7 @@ command = ["echo", "b"]
 id = "example.startup-manifest"
 name = "Startup Manifest"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos", "windows"]
 
 [[startup]]
@@ -1287,7 +1287,7 @@ platforms = ["linux", "macos"]
     fn plugin_command_output_reader_caps_and_marks_truncation() {
         let output = read_capped_plugin_output("abcdef".as_bytes(), 3);
 
-        assert_eq!(output, "abc\n[herdr truncated plugin output after 3 bytes]");
+        assert_eq!(output, "abc\n[hive truncated plugin output after 3 bytes]");
     }
 
     #[test]
@@ -1486,7 +1486,7 @@ platforms = ["linux", "macos"]
 id = "example.pane"
 name = "Pane Plugin"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos"]
 
 [[panes]]
@@ -1593,7 +1593,7 @@ command = ["sh", "-c", "printf '%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n' \"$PWD\" \
 id = "example.path-env"
 name = "Path Env"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos"]
 
 [[panes]]
@@ -1697,7 +1697,7 @@ command = ["sh", "-c", "printf '%s\n%s\n%s\n' \"$HIVE_PLUGIN_ROOT\" \"$HIVE_PLUG
 id = "example.tab"
 name = "Tab Plugin"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos"]
 
 [[panes]]
@@ -1780,7 +1780,7 @@ command = ["sh", "-c", "sleep 1"]
 id = "example.split"
 name = "Split Plugin"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos"]
 
 [[panes]]
@@ -1859,7 +1859,7 @@ command = ["sh", "-c", "sleep 1"]
 id = "example.overlay"
 name = "Overlay Plugin"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos"]
 
 [[panes]]
@@ -1940,7 +1940,7 @@ command = ["sh", "-c", "sleep 1"]
 id = "example.popup"
 name = "Popup Plugin"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos"]
 
 [[panes]]
@@ -2271,7 +2271,7 @@ command = ["sh", "-c", "printf %s ${{HIVE_PANE_ID-unset}} > '{}'; sleep 1"]
 id = "example.runner"
 name = "Runner"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos"]
 
 [[actions]]
@@ -2338,7 +2338,7 @@ command = ["sh", "-c", "printf '%s' \"$HIVE_PLUGIN_ACTION_ID\""]
 id = "example.action-paths"
 name = "Action Paths"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos"]
 
 [[actions]]
@@ -2451,7 +2451,7 @@ command = ["sh", "-c", "printf '%s\n%s\n%s' \"$HIVE_PLUGIN_ROOT\" \"$HIVE_PLUGIN
 id = "example.startup"
 name = "Startup"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos"]
 
 [[startup]]
@@ -2498,7 +2498,7 @@ command = ["sh", "-c", "printf '%s:%s' \"$HIVE_PLUGIN_ID\" \"$HIVE_PLUGIN_EVENT\
 id = "example.event-context"
 name = "Event Context"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos"]
 
 [[events]]
@@ -2716,7 +2716,7 @@ command = ["sh", "-c", "printf '%s' \"$HIVE_PLUGIN_CONTEXT_JSON\" > {}"]
 id = "example.links"
 name = "Links"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos"]
 
 [[actions]]
@@ -2784,7 +2784,7 @@ action = "open"
 id = "example.link-order"
 name = "Link Order"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos", "windows"]
 
 [[actions]]
@@ -2831,7 +2831,7 @@ action = "generic"
 id = "example.bad-links"
 name = "Bad Links"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos", "windows"]
 
 [[actions]]
@@ -2874,7 +2874,7 @@ action = "open"
 id = "example.bad-link-action"
 name = "Bad Link Action"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos", "windows"]
 
 [[actions]]
@@ -2942,12 +2942,12 @@ action = "missing"
         // write a manifest with a "show" action in pane context
         std::fs::create_dir_all(&root).unwrap();
         std::fs::write(
-            root.join("herdr-plugin.toml"),
+            root.join("hive-plugin.toml"),
             r#"
 id = "example.context"
 name = "Context"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 
 [[actions]]
 id = "show"
@@ -3037,14 +3037,14 @@ command = ["show-ctx"]
 
     fn write_manifest_with_bad_event(root: &std::path::Path) -> std::path::PathBuf {
         std::fs::create_dir_all(root).unwrap();
-        let manifest = root.join("herdr-plugin.toml");
+        let manifest = root.join("hive-plugin.toml");
         std::fs::write(
             &manifest,
             r#"
 id = "example.bad-event"
 name = "Bad Event Plugin"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 
 [[events]]
 on = "worktree.craeted"
@@ -3323,12 +3323,12 @@ command = ["sh", "-c", "echo ok"]
         let root = unique_temp_path("plugin-platforms");
         std::fs::create_dir_all(&root).unwrap();
         std::fs::write(
-            root.join("herdr-plugin.toml"),
+            root.join("hive-plugin.toml"),
             r#"
 id = "example.platforms"
 name = "Platforms"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos"]
 
 [[actions]]
@@ -3405,13 +3405,13 @@ command = ["run.bat"]
         };
 
         std::fs::write(
-            root.join("herdr-plugin.toml"),
+            root.join("hive-plugin.toml"),
             format!(
                 r#"
 id = "example.reject"
 name = "Reject"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 {excluded_platforms}
 
 [[actions]]
@@ -3470,13 +3470,13 @@ command = ["act"]
         };
 
         std::fs::write(
-            root.join("herdr-plugin.toml"),
+            root.join("hive-plugin.toml"),
             format!(
                 r#"
 id = "example.override"
 name = "Override"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos", "windows"]
 
 [[actions]]
@@ -3522,12 +3522,12 @@ command = ["act"]
         let root = unique_temp_path("plugin-platform-undeclared");
         std::fs::create_dir_all(&root).unwrap();
         std::fs::write(
-            root.join("herdr-plugin.toml"),
+            root.join("hive-plugin.toml"),
             r#"
 id = "example.nodecl"
 name = "No Decl"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 
 [[actions]]
 id = "act"
@@ -3580,12 +3580,12 @@ command = ["act"]
         let root = unique_temp_path("plugin-bad-platform");
         std::fs::create_dir_all(&root).unwrap();
         std::fs::write(
-            root.join("herdr-plugin.toml"),
+            root.join("hive-plugin.toml"),
             r#"
 id = "example.badplatform"
 name = "Bad Platform"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "beos"]
 
 [[actions]]
@@ -3612,12 +3612,12 @@ command = ["act"]
         let root = unique_temp_path("plugin-platform-rt");
         std::fs::create_dir_all(&root).unwrap();
         std::fs::write(
-            root.join("herdr-plugin.toml"),
+            root.join("hive-plugin.toml"),
             r#"
 id = "example.platform-rt"
 name = "Platform RT"
 version = "0.1.0"
-min_herdr_version = "0.6.10"
+min_hive_version = "0.6.10"
 platforms = ["linux", "macos"]
 
 [[actions]]

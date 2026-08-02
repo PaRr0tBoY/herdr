@@ -2216,7 +2216,7 @@ rows = [[{ token = "git_status", fg = "#123456" }]]
     #[tokio::test]
     async fn all_workspaces_agent_panel_entries_use_live_root_runtime_cwd_for_workspace_label() {
         let unique = format!(
-            "herdr-agent-panel-runtime-cwd-{}-{}",
+            "hive-agent-panel-runtime-cwd-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

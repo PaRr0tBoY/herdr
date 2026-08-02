@@ -35,10 +35,10 @@ fn parse_status_args(args: &[String]) -> Option<(StatusScope, bool)> {
         None => Some((StatusScope::Full, false)),
         Some("--json") if args.len() == 1 => Some((StatusScope::Full, true)),
         Some("server") => {
-            parse_status_scope_args(args, StatusScope::Server, "herdr status server [--json]")
+            parse_status_scope_args(args, StatusScope::Server, "hive status server [--json]")
         }
         Some("client") => {
-            parse_status_scope_args(args, StatusScope::Client, "herdr status client [--json]")
+            parse_status_scope_args(args, StatusScope::Client, "hive status client [--json]")
         }
         Some("help" | "--help" | "-h") => {
             if args.len() > 1 {

@@ -1000,7 +1000,7 @@ mod tests {
     #[test]
     fn restored_worktree_space_membership_drops_missing_checkout() {
         let missing =
-            std::env::temp_dir().join(format!("herdr-missing-worktree-{}", std::process::id()));
+            std::env::temp_dir().join(format!("hive-missing-worktree-{}", std::process::id()));
         let membership = crate::workspace::WorktreeSpaceMembership {
             key: "repo-key".into(),
             label: "herdr".into(),

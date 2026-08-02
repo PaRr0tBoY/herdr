@@ -155,8 +155,8 @@ fn generated_protocol_schema_artifact_is_current() {
         "{}\n",
         serde_json::to_string_pretty(&protocol_schema_document()).unwrap()
     );
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("docs/next/api/herdr-api.schema.json");
+    let path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("docs/next/api/hive-api.schema.json");
 
     if std::env::var_os("HIVE_UPDATE_API_SCHEMA").is_some() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -255,7 +255,7 @@ fn notification_show_request_parses() {
     assert_eq!(params.body.as_deref(), Some("api workspace"));
     assert_eq!(
         params.position,
-        Some(crate::config::ToastHerdrPosition::TopLeft)
+        Some(crate::config::ToastHivePosition::TopLeft)
     );
     assert_eq!(params.sound, NotificationShowSound::Request);
 }
@@ -897,9 +897,9 @@ fn plugin_link_list_unlink_round_trip() {
         plugin_id: "example.worktree-bootstrap".into(),
         name: "Worktree Bootstrap".into(),
         version: "0.1.0".into(),
-        min_herdr_version: crate::build_info::BASE_VERSION.into(),
+        min_hive_version: crate::build_info::BASE_VERSION.into(),
         description: Some("Prepare new worktrees".into()),
-        manifest_path: "/plugins/worktree-bootstrap/herdr-plugin.toml".into(),
+        manifest_path: "/plugins/worktree-bootstrap/hive-plugin.toml".into(),
         plugin_root: "/plugins/worktree-bootstrap".into(),
         enabled: true,
         platforms: None,

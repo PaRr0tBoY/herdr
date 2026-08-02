@@ -14,7 +14,7 @@ pub(crate) fn toast_notify_kind(delivery: config::ToastDelivery) -> Option<proto
     match delivery {
         config::ToastDelivery::Terminal => Some(protocol::NotifyKind::Toast),
         config::ToastDelivery::System => Some(protocol::NotifyKind::SystemToast),
-        config::ToastDelivery::Off | config::ToastDelivery::Herdr => None,
+        config::ToastDelivery::Off | config::ToastDelivery::Hive => None,
     }
 }
 
@@ -94,7 +94,7 @@ mod tests {
         let root = state.workspaces[0].tabs[0].root_pane;
         let terminal_id = state.workspaces[0].terminal_id(root).cloned().unwrap();
         let temp_root = std::env::temp_dir().join(format!(
-            "herdr-forwarded-toast-context-{}-{}",
+            "hive-forwarded-toast-context-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

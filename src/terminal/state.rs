@@ -49,6 +49,7 @@ enum FullLifecycleHookSuppressionReason {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum FullLifecycleHookReportRoute {
     Accept { reanchor_sequence: bool },
+    AcceptTerminal,
     Ignore,
 }
 
@@ -605,6 +606,31 @@ impl TerminalState {
         seq: Option<u64>,
         now: Instant,
     ) -> Option<TerminalStateMutation> {
+        let process_exit_age_ms = self
+            .recent_agent_process_exit
+            .as_ref()
+            .map(|exit| now.saturating_duration_since(exit.observed_at).as_millis());
+        tracing::debug!(
+            event = "agent.hook.received",
+            source = %source,
+            agent = %agent_label,
+            state = ?state,
+            seq = ?seq,
+            has_session_ref = session_ref.is_some(),
+            session_ref_kind = ?session_ref.as_ref().map(|reference| reference.kind),
+            session_ref_value = ?session_ref.as_ref().map(|reference| reference.value.as_str()),
+            detected_agent = ?self.detected_agent,
+            current_state = ?self.state,
+            recent_process_exit = self.recent_agent_process_exit.is_some(),
+            recent_process_exit_agent = ?self.recent_agent_process_exit.as_ref().map(|exit| exit.agent),
+            process_exit_age_ms = ?process_exit_age_ms,
+            hook_authority_source = ?self.hook_authority.as_ref().map(|authority| authority.source.as_str()),
+            hook_authority_agent = ?self.hook_authority.as_ref().map(|authority| authority.agent_label.as_str()),
+            hook_authority_state = ?self.hook_authority.as_ref().map(|authority| authority.state),
+            suppressed = self.suppressed_full_lifecycle_hook_reports.contains_key(&source),
+            "processing agent hook report"
+        );
+
         if crate::detect::session_identity_only_integration(&source, &agent_label) {
             return None;
         }
@@ -615,7 +641,7 @@ impl TerminalState {
         {
             return None;
         }
-        let reanchor_sequence = match self.route_full_lifecycle_hook_report(
+        let (terminal_completion, reanchor_sequence) = match self.route_full_lifecycle_hook_report(
             &source,
             &agent_label,
             state,
@@ -624,10 +650,36 @@ impl TerminalState {
             seq,
             now,
         ) {
-            FullLifecycleHookReportRoute::Accept { reanchor_sequence } => reanchor_sequence,
-            FullLifecycleHookReportRoute::Ignore => return None,
+            FullLifecycleHookReportRoute::Accept { reanchor_sequence } => {
+                (false, reanchor_sequence)
+            }
+            FullLifecycleHookReportRoute::AcceptTerminal => (true, false),
+            FullLifecycleHookReportRoute::Ignore => {
+                tracing::debug!(
+                    event = "agent.hook.apply",
+                    outcome = "ignored",
+                    reason = "route_rejected",
+                    source = %source,
+                    agent = %agent_label,
+                    state = ?state,
+                    seq = ?seq,
+                    "agent hook report was rejected by route"
+                );
+                return None;
+            }
         };
         if self.known_agent_label_conflicts_with_detected_agent(&agent_label) {
+            tracing::debug!(
+                event = "agent.hook.apply",
+                outcome = "ignored",
+                reason = "detected_agent_mismatch",
+                source = %source,
+                agent = %agent_label,
+                state = ?state,
+                seq = ?seq,
+                detected_agent = ?self.detected_agent,
+                "agent hook report conflicts with detected agent"
+            );
             return None;
         }
         let owner_conflicts = self.current_session_owner_conflicts(&source, &agent_label);
@@ -638,6 +690,16 @@ impl TerminalState {
                 &session_ref,
             );
         if owner_conflicts && !foreground_takeover_allowed {
+            tracing::debug!(
+                event = "agent.hook.apply",
+                outcome = "ignored",
+                reason = "session_owner_conflict",
+                source = %source,
+                agent = %agent_label,
+                state = ?state,
+                seq = ?seq,
+                "agent hook report conflicts with current session owner"
+            );
             return None;
         }
         let session_ref = session_ref.map(|session_ref| {
@@ -657,13 +719,37 @@ impl TerminalState {
             &agent_label,
             &session_ref,
         ) {
+            tracing::debug!(
+                event = "agent.hook.apply",
+                outcome = "ignored",
+                reason = "live_authority_session_conflict",
+                source = %source,
+                agent = %agent_label,
+                state = ?state,
+                seq = ?seq,
+                "agent hook report conflicts with live authority session"
+            );
             return None;
         }
         if reanchor_sequence {
             self.hook_report_sequences.remove(&source);
         }
         if !self.accept_hook_report(&source, seq) {
+            tracing::debug!(
+                event = "agent.hook.apply",
+                outcome = "ignored",
+                reason = "stale_hook_sequence",
+                source = %source,
+                agent = %agent_label,
+                state = ?state,
+                seq = ?seq,
+                "agent hook report sequence was rejected"
+            );
             return None;
+        }
+        if terminal_completion {
+            self.fallback_state = AgentState::Idle;
+            self.fallback_visible_blocker = false;
         }
 
         let previous_agent_label = self.effective_agent_label().map(str::to_string);
@@ -837,6 +923,18 @@ impl TerminalState {
             };
         }
         if self.full_lifecycle_hook_report_matches_stale_session(source, agent_label, session_ref) {
+            tracing::debug!(
+                event = "agent.hook.route",
+                outcome = "ignored",
+                reason = "stale_session",
+                source,
+                agent = agent_label,
+                state = ?state,
+                seq = ?seq,
+                session_ref_kind = ?session_ref.as_ref().map(|reference| reference.kind),
+                session_ref_value = ?session_ref.as_ref().map(|reference| reference.value.as_str()),
+                "ignored stale full-lifecycle hook report"
+            );
             return FullLifecycleHookReportRoute::Ignore;
         }
 
@@ -862,6 +960,17 @@ impl TerminalState {
             });
         if let Some(suppressed) = self.suppressed_full_lifecycle_hook_reports.get(source) {
             if suppressed.agent_label != agent_label {
+                tracing::debug!(
+                    event = "agent.hook.route",
+                    outcome = "ignored",
+                    reason = "suppressed_agent_mismatch",
+                    source,
+                    agent = agent_label,
+                    suppressed_agent = %suppressed.agent_label,
+                    state = ?state,
+                    seq = ?seq,
+                    "ignored hook report for a different suppressed agent"
+                );
                 return FullLifecycleHookReportRoute::Ignore;
             }
             if suppressed.reason == FullLifecycleHookSuppressionReason::HookClear {
@@ -869,14 +978,64 @@ impl TerminalState {
                     (&suppressed.session_ref, session_ref),
                     (Some(previous), Some(incoming)) if previous != incoming
                 );
-                return if reanchor_sequence {
-                    FullLifecycleHookReportRoute::Accept {
+                if reanchor_sequence {
+                    tracing::debug!(
+                        event = "agent.hook.route",
+                        outcome = "accepted",
+                        reason = "hook_clear_new_session",
+                        source,
+                        agent = agent_label,
+                        state = ?state,
+                        seq = ?seq,
+                        "accepted hook report to reanchor after hook clear"
+                    );
+                    return FullLifecycleHookReportRoute::Accept {
                         reanchor_sequence: true,
-                    }
-                } else {
-                    FullLifecycleHookReportRoute::Ignore
-                };
+                    };
+                }
+                tracing::debug!(
+                    event = "agent.hook.route",
+                    outcome = "ignored",
+                    reason = "hook_clear_same_generation",
+                    source,
+                    agent = agent_label,
+                    state = ?state,
+                    seq = ?seq,
+                    "ignored hook report from cleared generation"
+                );
+                return FullLifecycleHookReportRoute::Ignore;
             }
+        }
+
+        // Completion is a terminal signal: if process-exit observation won the
+        // race, an anonymous idle report for the detected agent must still
+        // release the spinner. Hook-clear and session-generation guards above
+        // remain authoritative for stale reports.
+        let terminal_completion = matches!(state, AgentState::Idle)
+            && !process_present
+            && known_agent.is_some()
+            && self.detected_agent == known_agent
+            && match self.suppressed_full_lifecycle_hook_reports.get(source) {
+                None => session_ref.is_none(),
+                Some(suppressed) => {
+                    suppressed.reason == FullLifecycleHookSuppressionReason::ProcessExit
+                        && session_ref.is_none()
+                }
+            };
+        if terminal_completion {
+            tracing::info!(
+                event = "agent.hook.route",
+                outcome = "accepted_terminal",
+                reason = "idle_after_process_exit",
+                source,
+                agent = agent_label,
+                state = ?state,
+                process_present,
+                session_anchored,
+                has_session_ref = session_ref.is_some(),
+                "accepted terminal idle hook after process-exit race"
+            );
+            return FullLifecycleHookReportRoute::AcceptTerminal;
         }
 
         if process_present
@@ -885,29 +1044,75 @@ impl TerminalState {
                 .suppressed_full_lifecycle_hook_reports
                 .contains_key(source)
         {
+            let reanchor_sequence = self
+                .full_lifecycle_hook_report_has_fresh_session_after_stale_session(
+                    source,
+                    agent_label,
+                    session_ref,
+                );
+            tracing::debug!(
+                event = "agent.hook.route",
+                outcome = "accepted",
+                reason = "anchored_session",
+                source,
+                agent = agent_label,
+                state = ?state,
+                seq = ?seq,
+                process_present,
+                session_anchored,
+                has_session_ref = session_ref.is_some(),
+                reanchor_sequence,
+                "accepted full-lifecycle hook report"
+            );
+            return FullLifecycleHookReportRoute::Accept { reanchor_sequence };
+        }
+
+        // While the current process is present, accept state-only reports (no
+        // session_ref). A pending process-exit generation stays gated until a
+        // session-start report claims it.
+        if process_present
+            && session_ref.is_none()
+            && !self
+                .suppressed_full_lifecycle_hook_reports
+                .contains_key(source)
+        {
+            tracing::debug!(
+                event = "agent.hook.route",
+                outcome = "accepted",
+                reason = "state_only_process_present",
+                source,
+                agent = agent_label,
+                state = ?state,
+                seq = ?seq,
+                process_present,
+                session_anchored,
+                has_session_ref = false,
+                "accepted state-only hook report while process is present"
+            );
             return FullLifecycleHookReportRoute::Accept {
-                reanchor_sequence: self
-                    .full_lifecycle_hook_report_has_fresh_session_after_stale_session(
-                        source,
-                        agent_label,
-                        session_ref,
-                    ),
+                reanchor_sequence: false,
             };
         }
 
         let Some(session_ref) = session_ref.clone() else {
+            tracing::warn!(
+                event = "agent.hook.route",
+                outcome = "ignored",
+                reason = "missing_session_ref",
+                source,
+                agent = agent_label,
+                state = ?state,
+                seq = ?seq,
+                process_present,
+                session_anchored,
+                has_session_ref = false,
+                suppressed = self
+                    .suppressed_full_lifecycle_hook_reports
+                    .contains_key(source),
+                "ignored full-lifecycle hook report without session reference"
+            );
             return FullLifecycleHookReportRoute::Ignore;
         };
-        let Some(seq) = seq else {
-            return FullLifecycleHookReportRoute::Ignore;
-        };
-        if self
-            .hook_report_sequences
-            .get(source)
-            .is_some_and(|previous| seq <= *previous)
-        {
-            return FullLifecycleHookReportRoute::Ignore;
-        }
 
         let previous_session_ref = self
             .persisted_agent_session
@@ -925,23 +1130,46 @@ impl TerminalState {
                 replacement_session_ref: None,
                 pending_replacement_report: None,
             });
-        let replace_pending = suppressed
-            .pending_replacement_report
-            .as_ref()
-            .is_none_or(|pending| seq > pending.seq);
+        let session_ref_kind = session_ref.kind;
+        let replace_pending = seq.map_or(true, |seq| {
+            suppressed
+                .pending_replacement_report
+                .as_ref()
+                .is_none_or(|pending| seq > pending.seq)
+        });
         if replace_pending {
-            suppressed.pending_replacement_report = Some(PendingFullLifecycleHookReport {
-                authority: HookAuthority {
-                    source: source.to_string(),
-                    agent_label: agent_label.to_string(),
-                    state,
-                    message: message.map(str::to_string),
-                    reported_at,
-                    session_ref: Some(session_ref),
-                },
-                seq,
-            });
+            if let Some(seq) = seq {
+                suppressed.pending_replacement_report = Some(PendingFullLifecycleHookReport {
+                    authority: HookAuthority {
+                        source: source.to_string(),
+                        agent_label: agent_label.to_string(),
+                        state,
+                        message: message.map(str::to_string),
+                        reported_at,
+                        session_ref: Some(session_ref),
+                    },
+                    seq,
+                });
+            }
         }
+        tracing::debug!(
+            event = "agent.hook.route",
+            outcome = "ignored",
+            reason = "process_exit_generation_gated",
+            source,
+            agent = agent_label,
+            state = ?state,
+            seq = ?seq,
+            process_present,
+            session_anchored,
+            has_session_ref = true,
+            session_ref_kind = ?session_ref_kind,
+            pending_replacement_seq = ?suppressed
+                .pending_replacement_report
+                .as_ref()
+                .map(|pending| pending.seq),
+            "buffered full-lifecycle hook report pending session generation"
+        );
         FullLifecycleHookReportRoute::Ignore
     }
 
@@ -1326,7 +1554,19 @@ impl TerminalState {
         seq: Option<u64>,
         session_start_source: Option<String>,
     ) -> Option<TerminalStateMutation> {
-        let session_ref = session_ref?;
+        let Some(session_ref) = session_ref else {
+            tracing::warn!(
+                event = "agent.session.route",
+                outcome = "ignored",
+                reason = "missing_session_ref",
+                source = %source,
+                agent = %agent_label,
+                seq = ?seq,
+                session_start_source = ?session_start_source,
+                "agent session report ignored without session reference"
+            );
+            return None;
+        };
         let known_agent = crate::detect::parse_agent_label(&agent_label);
         let process_present = known_agent.is_some()
             && self.detected_agent == known_agent
@@ -1345,17 +1585,62 @@ impl TerminalState {
                 && authority.agent_label == agent_label
                 && authority.session_ref.is_some()
         }) || self.persisted_agent_session_matches(&source, &agent_label);
+        tracing::debug!(
+            event = "agent.session.route",
+            outcome = "evaluated",
+            source = %source,
+            agent = %agent_label,
+            seq = ?seq,
+            session_start_source = ?session_start_source,
+            session_ref_kind = ?session_ref.kind,
+            session_ref_value = %session_ref.value,
+            process_present,
+            full_lifecycle_source,
+            generation_gated,
+            session_anchored,
+            "evaluated agent session report"
+        );
+
         if full_lifecycle_source && (!process_present || generation_gated || !session_anchored) {
             if !Self::session_start_source_is_recognized(session_start_source.as_deref()) {
+                tracing::warn!(
+                    event = "agent.session.route",
+                    outcome = "ignored",
+                    reason = "unrecognized_session_start_source",
+                    source = %source,
+                    agent = %agent_label,
+                    seq = ?seq,
+                    session_start_source = ?session_start_source,
+                    "ignored agent session report with unrecognized start source"
+                );
                 return None;
             }
-            let seq = seq?;
-            if self
-                .hook_report_sequences
-                .get(&source)
-                .is_some_and(|previous| seq <= *previous)
-            {
+            let Some(seq) = seq else {
+                tracing::warn!(
+                    event = "agent.session.route",
+                    outcome = "ignored",
+                    reason = "missing_sequence",
+                    source = %source,
+                    agent = %agent_label,
+                    session_start_source = ?session_start_source,
+                    "ignored agent session report without sequence"
+                );
                 return None;
+            };
+            if let Some(previous) = self.hook_report_sequences.get(&source) {
+                if seq <= *previous {
+                    tracing::debug!(
+                        event = "agent.session.route",
+                        outcome = "ignored",
+                        reason = "stale_sequence",
+                        source = %source,
+                        agent = %agent_label,
+                        seq,
+                        previous_seq = *previous,
+                        "ignored stale agent session report"
+                    );
+                    return None;
+                }
             }
 
             let previous_agent_label = self.effective_agent_label().map(str::to_string);
@@ -3203,6 +3488,59 @@ mod tests {
 
         assert!(child_update.is_some());
         assert_eq!(terminal.state, AgentState::Working);
+    }
+
+    #[test]
+    fn idle_hook_wins_process_exit_ordering_without_session_ref() {
+        let now = Instant::now();
+        let mut terminal = test_terminal();
+        terminal.set_detected_state(Some(Agent::Omp), AgentState::Idle);
+        let session_ref = crate::agent_resume::AgentSessionRef::id("omp-ordering").unwrap();
+        terminal.set_persisted_agent_session(crate::agent_resume::PersistedAgentSession {
+            source: "hive:omp".into(),
+            agent: "omp".into(),
+            session_ref: session_ref.clone(),
+        });
+
+        let working = terminal.set_hook_authority_at(
+            "hive:omp".into(),
+            "omp".into(),
+            AgentState::Working,
+            None,
+            Some(session_ref),
+            Some(100),
+            now,
+        );
+        assert!(working.is_some());
+        assert_eq!(terminal.state, AgentState::Working);
+
+        terminal.set_detected_state_with_screen_signals_at(
+            Some(Agent::Omp),
+            AgentState::Idle,
+            false,
+            true,
+            false,
+            true,
+            now + Duration::from_millis(1),
+        );
+        assert!(terminal
+            .suppressed_full_lifecycle_hook_reports
+            .contains_key("hive:omp"));
+
+        // The process-exit event has already won the race; the late idle hook
+        // has no session reference but must still be allowed to complete state.
+        let idle = terminal.set_hook_authority_at(
+            "hive:omp".into(),
+            "omp".into(),
+            AgentState::Idle,
+            None,
+            None,
+            Some(101),
+            now + Duration::from_millis(2),
+        );
+
+        assert!(idle.is_some());
+        assert_eq!(terminal.state, AgentState::Idle);
     }
 
     #[test]

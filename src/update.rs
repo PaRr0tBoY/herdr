@@ -558,7 +558,7 @@ fn download_update(release: &ReleaseInfo) -> Result<DownloadedUpdate, String> {
     let parent = current_exe.parent().ok_or("can't find binary directory")?;
 
     // Check write permissions early
-    let test_path = parent.join(".herdr-write-test");
+    let test_path = parent.join(".hive-write-test");
     if let Err(e) = fs::write(&test_path, b"") {
         let _ = fs::remove_file(&test_path);
         return Err(format!(
@@ -570,7 +570,7 @@ fn download_update(release: &ReleaseInfo) -> Result<DownloadedUpdate, String> {
     let _ = fs::remove_file(&test_path);
 
     // Unique temp file (avoids races with concurrent instances)
-    let tmp_path = parent.join(format!(".herdr-update-{}.tmp", std::process::id()));
+    let tmp_path = parent.join(format!(".hive-update-{}.tmp", std::process::id()));
 
     // Download the exact asset URL (pinned to the release we checked)
     let status = crate::noninteractive_process::curl_command()
@@ -871,7 +871,7 @@ fn plan_running_server_updates(
 
     if plans.is_empty() && target_client_protocol_server_is_running()? {
         return Err(format!(
-            "a herdr server is listening, but its status API is unavailable; try `{}`, or stop the old server process manually, then run `herdr update` again",
+            "a hive server is listening, but its status API is unavailable; try `{}`, or stop the old server process manually, then run `herdr update` again",
             crate::session::local_stop_command()
         ));
     }
@@ -1748,19 +1748,19 @@ pub(crate) fn update_install_command() -> &'static str {
 pub(crate) fn update_install_instruction(install_command: &str) -> String {
     match install_command {
         HIVE_UPDATE_COMMAND => {
-            "detach, run `herdr update`, then follow its restart guidance".to_string()
+            "detach, run `hive update`, then follow its restart guidance".to_string()
         }
         HOMEBREW_UPDATE_COMMAND => {
-            "detach, run `brew update && brew upgrade herdr`, then restart this Herdr session when ready".to_string()
+            "detach, run `brew update && brew upgrade hive`, then restart this Hive session when ready".to_string()
         }
         MISE_UPDATE_COMMAND => {
-            "detach, run `mise upgrade herdr`, then restart this Herdr session when ready"
+            "detach, run `mise upgrade hive`, then restart this Hive session when ready"
                 .to_string()
         }
         NIX_UPDATE_COMMAND => {
-            "detach, update through Nix, then restart this Herdr session when ready".to_string()
+            "detach, update through Nix, then restart this Hive session when ready".to_string()
         }
-        command => format!("detach, run `{command}`, then restart this Herdr session when ready"),
+        command => format!("detach, run `{command}`, then restart this Hive session when ready"),
     }
 }
 
@@ -2461,10 +2461,8 @@ mod tests {
     fn package_manager_path_detection_follows_homebrew_symlink() {
         #[cfg(unix)]
         {
-            let root = std::env::temp_dir().join(format!(
-                "herdr-homebrew-symlink-test-{}",
-                std::process::id()
-            ));
+            let root = std::env::temp_dir()
+                .join(format!("hive-homebrew-symlink-test-{}", std::process::id()));
             let cellar_bin = root.join("Cellar/herdr/0.6.2/bin");
             let opt_bin = root.join("opt/herdr/bin");
             fs::create_dir_all(&cellar_bin).unwrap();
@@ -2484,8 +2482,8 @@ mod tests {
     fn package_manager_path_detection_follows_mise_symlink() {
         #[cfg(unix)]
         {
-            let root = std::env::temp_dir()
-                .join(format!("herdr-mise-symlink-test-{}", std::process::id()));
+            let root =
+                std::env::temp_dir().join(format!("hive-mise-symlink-test-{}", std::process::id()));
             let version_bin = root.join("installs/herdr/0.6.2/bin");
             let latest_bin = root.join("installs/herdr/latest/bin");
             fs::create_dir_all(&version_bin).unwrap();
@@ -2599,15 +2597,15 @@ mod tests {
     fn update_install_instruction_distinguishes_install_from_restart() {
         assert_eq!(
             update_install_instruction(HIVE_UPDATE_COMMAND),
-            "detach, run `herdr update`, then follow its restart guidance"
+            "detach, run `hive update`, then follow its restart guidance"
         );
         assert_eq!(
             update_install_instruction(HOMEBREW_UPDATE_COMMAND),
-            "detach, run `brew update && brew upgrade herdr`, then restart this Herdr session when ready"
+            "detach, run `brew update && brew upgrade hive`, then restart this Hive session when ready"
         );
         assert_eq!(
             update_install_instruction(MISE_UPDATE_COMMAND),
-            "detach, run `mise upgrade herdr`, then restart this Herdr session when ready"
+            "detach, run `mise upgrade hive`, then restart this Hive session when ready"
         );
     }
 
@@ -2797,7 +2795,7 @@ mod tests {
     fn explicit_session_update_targets_only_that_session() {
         let _guard = env_lock().lock().unwrap();
         let config_home = set_test_config_home("explicit-session");
-        std::env::set_var(crate::api::SOCKET_PATH_ENV_VAR, "/tmp/ignored-herdr.sock");
+        std::env::set_var(crate::api::SOCKET_PATH_ENV_VAR, "/tmp/ignored-hive.sock");
         std::env::remove_var(crate::session::SESSION_ENV_VAR);
         crate::session::clear_explicit_session_for_test();
         let args = vec![
@@ -2826,7 +2824,7 @@ mod tests {
     #[test]
     fn socket_override_update_targets_socket_not_env_session() {
         let _guard = env_lock().lock().unwrap();
-        std::env::set_var(crate::api::SOCKET_PATH_ENV_VAR, "/tmp/custom-herdr.sock");
+        std::env::set_var(crate::api::SOCKET_PATH_ENV_VAR, "/tmp/custom-hive.sock");
         std::env::set_var(crate::session::SESSION_ENV_VAR, "work");
         crate::session::clear_explicit_session_for_test();
 
@@ -2840,7 +2838,7 @@ mod tests {
         assert_eq!(targets[0].name, None);
         assert_eq!(
             targets[0].socket_path,
-            PathBuf::from("/tmp/custom-herdr.sock")
+            PathBuf::from("/tmp/custom-hive.sock")
         );
         assert!(targets[0]
             .stop_command

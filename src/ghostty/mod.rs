@@ -3349,7 +3349,7 @@ mod tests {
         use base64::Engine;
 
         let dir = std::env::temp_dir().join(format!(
-            "herdr-kitty-file-medium-test-{}",
+            "hive-kitty-file-medium-test-{}",
             std::process::id()
         ));
         std::fs::create_dir_all(&dir).unwrap();

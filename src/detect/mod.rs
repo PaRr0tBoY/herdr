@@ -289,11 +289,20 @@ pub(crate) fn full_lifecycle_hook_authority(source: &str, agent_label: &str) -> 
             | ("herdr:opencode", "opencode")
             | ("herdr:kilo", "kilo")
             | ("herdr:kimi", "kimi")
+            | ("hive:pi", "pi")
+            | ("hive:omp", "omp")
+            | ("hive:mastracode", "mastracode")
+            | ("hive:opencode", "opencode")
+            | ("hive:kilo", "kilo")
+            | ("hive:kimi", "kimi")
     )
 }
 
 pub(crate) fn session_identity_only_integration(source: &str, agent_label: &str) -> bool {
-    (source, agent_label) == ("herdr:hermes", "hermes")
+    matches!(
+        (source, agent_label),
+        ("herdr:hermes", "hermes") | ("hive:hermes", "hermes")
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -632,7 +641,7 @@ mod tests {
     #[cfg(unix)]
     fn temp_detection_path(name: &str) -> std::path::PathBuf {
         let unique = format!(
-            "herdr-detect-tests-{}-{}-{}",
+            "hive-detect-tests-{}-{}-{}",
             name,
             std::process::id(),
             std::time::SystemTime::now()

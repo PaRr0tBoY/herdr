@@ -127,6 +127,31 @@ async function startRecordingServer(name: string): Promise<unknown[]> {
   return requests;
 }
 
+function installImmediateRecordingSocket(): unknown[] {
+  const requests: unknown[] = [];
+  net.createConnection = (() => {
+    const listeners = new Map<string, () => void>();
+    const socket = {
+      on(event: string, listener: () => void) {
+        listeners.set(event, listener);
+        if (event === "connect") {
+          queueMicrotask(listener);
+        }
+        return socket;
+      },
+      write(payload: string) {
+        requests.push(JSON.parse(payload.trim()));
+        queueMicrotask(() => listeners.get("data")?.());
+        return true;
+      },
+      destroy() {},
+    };
+    return socket;
+  }) as typeof net.createConnection;
+  return requests;
+}
+
+
 for (const socketPlugin of socketPlugins) {
   test(`${socketPlugin.name} maps the Windows socket marker path to a named pipe endpoint`, async () => {
     const markerPath = `herdr-${socketPlugin.name.toLowerCase()}-${process.pid}.sock`;
@@ -181,6 +206,7 @@ for (const integration of integrations) {
 
     expect(connectedEndpoint()).toBe(`\\\\.\\pipe\\${markerPath}`);
   });
+
 
   test(`${integration.name} reload preserves working state when the agent is active`, async () => {
     const requests = await startRecordingServer(
@@ -433,6 +459,67 @@ async function startDroppedFirstResponseServer(name: string) {
     connectionCount: () => connectionCount,
   };
 }
+
+test("Oh My Pi reports idle from agent_end before the context becomes idle", async () => {
+  process.env.HIVE_OMP_IDLE_DEBOUNCE_MS = "0";
+  configureIntegrationEnvironment("hive-omp-agent-end-test.sock");
+  const requests = installImmediateRecordingSocket();
+  const { handlers, pi } = createExtensionHarness();
+  const { default: install } = await importFresh("./omp/herdr-agent-state.ts");
+  install(pi);
+
+  const sessionPath = "C:\\Users\\Acid\\AppData\\Local\\omp\\session.jsonl";
+  const context = {
+    hasUI: true,
+    isIdle: () => false,
+    sessionManager: {
+      getSessionFile: () => sessionPath,
+      getSessionId: () => undefined,
+    },
+  };
+
+  await handlers.get("session_start")?.({ reason: "startup" }, context);
+  await waitFor(() => requestStates(requests).length === 1);
+  await handlers.get("agent_end")?.({ messages: [] }, context);
+  await waitFor(() => requestStates(requests).length === 2);
+
+  expect(requestStates(requests)).toEqual(["working", "idle"]);
+  expect(
+    requests
+      .filter((request) => isRecord(request) && request.method === "pane.report_agent")
+      .every(
+        (request) =>
+          isRecord(request) &&
+          isRecord(request.params) &&
+          request.params.agent_session_path === sessionPath,
+      ),
+  ).toBe(true);
+});
+
+test("Oh My Pi ignores duplicate completion events after agent_end", async () => {
+  process.env.HIVE_OMP_IDLE_DEBOUNCE_MS = "0";
+  configureIntegrationEnvironment("hive-omp-duplicate-end-test.sock");
+  const requests = installImmediateRecordingSocket();
+  const { handlers, pi } = createExtensionHarness();
+  const { default: install } = await importFresh("./omp/herdr-agent-state.ts");
+  install(pi);
+
+  const context = {
+    hasUI: true,
+    isIdle: () => false,
+    sessionManager: {
+      getSessionFile: () => "C:\\Users\\Acid\\AppData\\Local\\omp\\session.jsonl",
+      getSessionId: () => undefined,
+    },
+  };
+
+  await handlers.get("session_start")?.({ reason: "startup" }, context);
+  await waitFor(() => requestStates(requests).length === 1);
+  await handlers.get("agent_end")?.({ messages: [] }, context);
+  await waitFor(() => requestStates(requests).length === 2);
+  await handlers.get("agent_settled")?.({}, { ...context, isIdle: () => true });
+  expect(requestStates(requests)).toEqual(["working", "idle"]);
+});
 
 test("Oh My Pi retries working before a queued idle state", async () => {
   const { attemptedRequests } = await startDroppedFirstResponseServer("omp-retry");

@@ -1356,7 +1356,7 @@ pub struct ToastNotification {
     pub kind: ToastKind,
     pub title: String,
     pub context: String,
-    pub position: Option<crate::config::ToastHerdrPosition>,
+    pub position: Option<crate::config::ToastHivePosition>,
     pub target: Option<ToastTarget>,
 }
 
@@ -1533,7 +1533,7 @@ pub struct AppState {
     pub sidebar_agents: crate::config::AgentsSidebarConfig,
     pub sidebar_spaces: crate::config::SpacesSidebarConfig,
     pub next_agent_state_change_seq: u64,
-    /// Capture mouse input for Herdr's own mouse UI. When false, Herdr only
+    /// Capture mouse input for Hive's own mouse UI. When false, Herdr only
     /// captures mouse while the focused pane app requests mouse reporting.
     pub mouse_capture: bool,
     pub copy_on_select: bool,

@@ -91,14 +91,14 @@ mod tests {
 
     #[test]
     fn client_socket_path_derived_from_api_socket_override() {
-        let path = client_socket_path_from_overrides(Some("/tmp/test-herdr.sock"), None);
+        let path = client_socket_path_from_overrides(Some("/tmp/test-hive.sock"), None);
         assert_eq!(path, PathBuf::from("/tmp/test-herdr-client.sock"));
     }
 
     #[test]
     fn client_socket_path_api_override_takes_precedence_over_legacy_client_override() {
         let path = client_socket_path_from_overrides(
-            Some("/tmp/test-herdr.sock"),
+            Some("/tmp/test-hive.sock"),
             Some("/tmp/legacy-client.sock"),
         );
         assert_eq!(path, PathBuf::from("/tmp/test-herdr-client.sock"));

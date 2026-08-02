@@ -10,7 +10,7 @@ use super::targets::{
     uninstall_opencode, uninstall_pi, uninstall_qodercli,
 };
 use super::version::{agent_version_requirement, enforce_agent_version};
-use super::{KIMI_MIN_VERSION, PI_EXTENSION_INSTALL_NAME};
+use super::{KIMI_MIN_VERSION, LEGACY_OMP_EXTENSION_INSTALL_NAME, PI_EXTENSION_INSTALL_NAME};
 
 pub(crate) fn install_target(
     target: crate::api::schema::IntegrationTarget,
@@ -48,6 +48,15 @@ fn install_target_inner(target: crate::api::schema::IntegrationTarget) -> io::Re
                     installed
                         .extension_path
                         .with_file_name(PI_EXTENSION_INSTALL_NAME)
+                        .display()
+                ));
+            }
+            if installed.removed_legacy_omp_extension {
+                messages.push(format!(
+                    "removed legacy omp integration from {}",
+                    installed
+                        .extension_path
+                        .with_file_name(LEGACY_OMP_EXTENSION_INSTALL_NAME)
                         .display()
                 ));
             }

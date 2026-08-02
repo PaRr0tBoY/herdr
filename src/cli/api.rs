@@ -55,7 +55,7 @@ fn api_schema(args: &[String]) -> std::io::Result<i32> {
 
 fn api_snapshot(args: &[String]) -> std::io::Result<i32> {
     if !args.is_empty() {
-        eprintln!("usage: herdr api snapshot");
+        eprintln!("usage: hive api snapshot");
         return Ok(2);
     }
 
@@ -89,7 +89,7 @@ fn schema_summary_text() -> std::io::Result<String> {
     schemas.sort();
 
     Ok(format!(
-        "Herdr API schema\nprotocol: {}\nschema_version: {}\nschemas: {}\n\nUse `herdr api schema --json` to print the full schema.\nUse `herdr api schema --output PATH` to write it to a file.\n",
+        "Hive API schema\nprotocol: {}\nschema_version: {}\nschemas: {}\n\nUse `hive api schema --json` to print the full schema.\nUse `hive api schema --output PATH` to write it to a file.\n",
         protocol,
         schema_version,
         schemas.join(", ")
@@ -103,7 +103,7 @@ fn print_api_help() {
 }
 
 fn print_api_schema_help() {
-    eprintln!("usage: herdr api schema [--json | --output PATH]");
+    eprintln!("usage: hive api schema [--json | --output PATH]");
 }
 
 #[cfg(test)]
@@ -111,8 +111,8 @@ mod tests {
     #[test]
     fn schema_summary_text_stays_human_sized() {
         let text = super::schema_summary_text().unwrap();
-        assert!(text.contains("Herdr API schema"));
-        assert!(text.contains("Use `herdr api schema --json`"));
+        assert!(text.contains("Hive API schema"));
+        assert!(text.contains("Use `hive api schema --json`"));
         assert!(text.len() < 400);
     }
 }

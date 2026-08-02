@@ -48,7 +48,7 @@ pub fn is_server_listening() -> bool {
     is_server_listening_at(&client_socket_path())
 }
 
-/// Checks whether a herdr server is listening at a specific socket path.
+/// Checks whether a hive server is listening at a specific socket path.
 fn is_server_listening_at(socket_path: &Path) -> bool {
     #[cfg(windows)]
     {
@@ -150,7 +150,7 @@ fn client_protocol_accepts_hello(socket_path: &Path) -> io::Result<bool> {
 fn validate_running_server_compatibility() -> io::Result<()> {
     let Some(status) = read_server_status()? else {
         return Err(io::Error::other(format!(
-            "a herdr server is listening, but its status API is unavailable.\n\n{}\nIf that fails, stop the old server process manually.",
+            "a hive server is listening, but its status API is unavailable.\n\n{}\nIf that fails, stop the old server process manually.",
             crate::session::active_restart_after_update_guidance()
         )));
     };
@@ -190,7 +190,7 @@ pub fn spawn_server_daemon() -> io::Result<u32> {
     let exe = std::env::current_exe().map_err(|err| {
         io::Error::new(
             err.kind(),
-            format!("failed to determine herdr executable path: {err}"),
+            format!("failed to determine hive executable path: {err}"),
         )
     })?;
 
@@ -199,7 +199,7 @@ pub fn spawn_server_daemon() -> io::Result<u32> {
     let mut command = build_server_daemon_command(exe);
 
     let child = command.spawn().map_err(|err: io::Error| {
-        io::Error::new(err.kind(), format!("failed to spawn herdr server: {err}"))
+        io::Error::new(err.kind(), format!("failed to spawn hive server: {err}"))
     })?;
 
     let pid = child.id();

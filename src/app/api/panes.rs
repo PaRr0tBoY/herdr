@@ -1214,14 +1214,30 @@ impl App {
         let Some(agent_label) = normalize_reported_agent_label(&params.agent) else {
             return invalid_agent(id);
         };
+        let has_session_path = params.agent_session_path.is_some();
+        let has_session_id = params.agent_session_id.is_some();
+        let session_ref = crate::agent_resume::session_ref_from_report(
+            &params.source,
+            &agent_label,
+            params.agent_session_id,
+            params.agent_session_path,
+        );
+        tracing::debug!(
+            event = "agent.hook.ingress",
+            pane = %params.pane_id,
+            source = %params.source,
+            agent = %agent_label,
+            state = ?params.state,
+            seq = ?params.seq,
+            has_session_path,
+            has_session_id,
+            session_ref_kind = ?session_ref.as_ref().map(|reference| reference.kind),
+            session_ref_value = ?session_ref.as_ref().map(|reference| reference.value.as_str()),
+            "agent state report received"
+        );
         self.handle_internal_event(crate::events::AppEvent::HookStateReported {
             pane_id,
-            session_ref: crate::agent_resume::session_ref_from_report(
-                &params.source,
-                &agent_label,
-                params.agent_session_id,
-                params.agent_session_path,
-            ),
+            session_ref,
             source: params.source,
             agent_label,
             state: detect_state_from_api(params.state),
@@ -1243,14 +1259,30 @@ impl App {
         let Some(agent_label) = normalize_reported_agent_label(&params.agent) else {
             return invalid_agent(id);
         };
+        let has_session_path = params.agent_session_path.is_some();
+        let has_session_id = params.agent_session_id.is_some();
+        let session_ref = crate::agent_resume::session_ref_from_report(
+            &params.source,
+            &agent_label,
+            params.agent_session_id,
+            params.agent_session_path,
+        );
+        tracing::debug!(
+            event = "agent.session.ingress",
+            pane = %params.pane_id,
+            source = %params.source,
+            agent = %agent_label,
+            seq = ?params.seq,
+            session_start_source = ?params.session_start_source,
+            has_session_path,
+            has_session_id,
+            session_ref_kind = ?session_ref.as_ref().map(|reference| reference.kind),
+            session_ref_value = ?session_ref.as_ref().map(|reference| reference.value.as_str()),
+            "agent session report received"
+        );
         self.handle_internal_event(crate::events::AppEvent::AgentSessionReported {
             pane_id,
-            session_ref: crate::agent_resume::session_ref_from_report(
-                &params.source,
-                &agent_label,
-                params.agent_session_id,
-                params.agent_session_path,
-            ),
+            session_ref,
             source: params.source,
             agent_label,
             seq: params.seq,

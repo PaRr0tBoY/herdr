@@ -51,7 +51,7 @@ fn agent_version_requirement_only_set_for_kimi() {
 fn enforce_agent_version_warns_when_binary_missing() {
     let requirement = AgentVersionRequirement {
         label: "kimi code",
-        binary: "herdr-test-binary-that-does-not-exist",
+        binary: "hive-test-binary-that-does-not-exist",
         args: &["--version"],
         min_version: "0.14.0",
     };
@@ -142,7 +142,7 @@ fn assert_kimi_hook(
 fn unique_base() -> PathBuf {
     clear_integration_path_env();
     std::env::temp_dir().join(format!(
-        "herdr-integration-install-test-{}-{}",
+        "hive-integration-install-test-{}-{}",
         std::process::id(),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -570,12 +570,36 @@ fn install_omp_writes_embedded_asset_to_omp_extensions_dir() {
         ext_dir.join(OMP_EXTENSION_INSTALL_NAME)
     );
     assert!(!installed.removed_legacy_pi_extension);
+    assert!(!installed.removed_legacy_omp_extension);
     assert_eq!(content, OMP_EXTENSION_ASSET);
 
     std::env::remove_var("HOME");
     let _ = fs::remove_dir_all(base);
 }
 
+#[test]
+fn install_omp_removes_legacy_omp_integration_from_omp_extensions_dir() {
+    let _lock = integration_env_lock();
+    let base = unique_base();
+    let home = base.join("home");
+    let ext_dir = home.join(".omp/agent/extensions");
+    fs::create_dir_all(&ext_dir).unwrap();
+    let legacy_path = ext_dir.join(LEGACY_OMP_EXTENSION_INSTALL_NAME);
+    fs::write(&legacy_path, OMP_EXTENSION_ASSET).unwrap();
+    std::env::set_var("HOME", &home);
+
+    let installed = install_omp().unwrap();
+
+    assert!(installed.removed_legacy_omp_extension);
+    assert!(!legacy_path.exists());
+    assert_eq!(
+        fs::read_to_string(&installed.extension_path).unwrap(),
+        OMP_EXTENSION_ASSET
+    );
+
+    std::env::remove_var("HOME");
+    let _ = fs::remove_dir_all(base);
+}
 #[test]
 fn install_omp_removes_legacy_pi_integration_from_omp_extensions_dir() {
     let _lock = integration_env_lock();
@@ -2392,7 +2416,7 @@ fn install_hermes_is_idempotent_for_enabled_entry() {
     install_hermes().unwrap();
 
     let config = fs::read_to_string(hermes_dir.join("config.yaml")).unwrap();
-    assert_eq!(config.matches("herdr-agent-state").count(), 1);
+    assert_eq!(config.matches("hive-agent-state").count(), 1);
 
     std::env::remove_var("HOME");
     let _ = fs::remove_dir_all(base);
@@ -2459,7 +2483,7 @@ fn install_hermes_is_idempotent_for_quoted_flat_plugin_entry() {
     fs::create_dir_all(&hermes_dir).unwrap();
     fs::write(
         hermes_dir.join("config.yaml"),
-        "plugins:\n  - \"herdr-agent-state\" # installed by herdr\n",
+        "plugins:\n  - \"hive-agent-state\" # installed by herdr\n",
     )
     .unwrap();
     std::env::set_var("HOME", &home);
@@ -2469,7 +2493,7 @@ fn install_hermes_is_idempotent_for_quoted_flat_plugin_entry() {
     let config = fs::read_to_string(hermes_dir.join("config.yaml")).unwrap();
     assert_eq!(
         config,
-        "plugins:\n  - \"herdr-agent-state\" # installed by herdr\n"
+        "plugins:\n  - \"hive-agent-state\" # installed by herdr\n"
     );
 
     std::env::remove_var("HOME");
@@ -2503,7 +2527,7 @@ fn uninstall_hermes_removes_plugin_and_enabled_entry() {
     assert!(result.updated_config);
     assert!(!plugin_dir.exists());
     assert!(config.contains("    - other-plugin"));
-    assert!(!config.contains("herdr-agent-state"));
+    assert!(!config.contains("hive-agent-state"));
 
     std::env::remove_var("HOME");
     let _ = fs::remove_dir_all(base);
@@ -2664,6 +2688,9 @@ fn bundled_integration_asset_versions_match_expected_versions() {
 fn bundled_integration_assets_report_session_refs() {
     assert!(PI_EXTENSION_ASSET.contains("agent_session_path"));
     assert!(PI_EXTENSION_ASSET.contains("agent_session_id"));
+    assert!(PI_EXTENSION_ASSET.contains("isAbsoluteSessionPath"));
+    assert!(PI_EXTENSION_ASSET.contains("HIVE_AGENT_DEBUG"));
+    assert!(PI_EXTENSION_ASSET.contains("socket_result"));
     assert!(PI_EXTENSION_ASSET.contains("ctx?.hasUI !== true"));
     assert!(PI_EXTENSION_ASSET.contains("pane.report_agent_session"));
     assert!(PI_EXTENSION_ASSET.contains("pane.report_agent\""));
@@ -2672,12 +2699,15 @@ fn bundled_integration_assets_report_session_refs() {
     assert!(!PI_EXTENSION_ASSET.contains("pi.on(\"session_shutdown\""));
     assert!(OMP_EXTENSION_ASSET.contains("agent_session_path"));
     assert!(OMP_EXTENSION_ASSET.contains("agent_session_id"));
+    assert!(OMP_EXTENSION_ASSET.contains("isAbsoluteSessionPath"));
+    assert!(OMP_EXTENSION_ASSET.contains("HIVE_AGENT_DEBUG"));
+    assert!(OMP_EXTENSION_ASSET.contains("socket_result"));
     assert!(OMP_EXTENSION_ASSET.contains("ctx?.hasUI !== true"));
-    assert!(OMP_EXTENSION_ASSET.contains("pane.report_agent_session"));
     assert!(OMP_EXTENSION_ASSET.contains("pane.report_agent\""));
     assert!(OMP_EXTENSION_ASSET.contains("pi.on(\"agent_start\""));
     assert!(OMP_EXTENSION_ASSET.contains("pi.on(\"agent_end\""));
-    assert!(OMP_EXTENSION_ASSET.contains("pi.on(\"session_shutdown\""));
+    assert!(OMP_EXTENSION_ASSET.contains("pi.on(\"agent_settled\""));
+    assert!(!OMP_EXTENSION_ASSET.contains("pi.on(\"session_shutdown\""));
     assert!(
         CLAUDE_HOOK_ASSET.contains("agent_session_id")
             || CLAUDE_HOOK_ASSET.contains("--agent-session-id")
@@ -2715,15 +2745,39 @@ fn bundled_integration_assets_report_session_refs() {
     );
     assert!(!CODEX_HOOK_ASSET.contains("\"state\": action"));
     assert!(!CODEX_HOOK_ASSET.contains("pane.release_agent"));
-    assert!(KIMI_HOOK_ASSET.contains("source\": \"herdr:kimi"));
-    assert!(KIMI_HOOK_ASSET.contains("agent_session_id"));
-    assert!(KIMI_HOOK_ASSET.contains("method = \"pane.report_agent_session\""));
-    assert!(KIMI_HOOK_ASSET.contains("params[\"session_start_source\"] = \"startup\""));
-    assert!(KIMI_HOOK_ASSET.contains("method = \"pane.report_agent\""));
-    assert!(KIMI_HOOK_ASSET.contains("params[\"state\"] = action"));
+    assert!(
+        KIMI_HOOK_ASSET.contains("source\": \"hive:kimi")
+            || KIMI_HOOK_ASSET.contains("--source hive:kimi")
+    );
+    assert!(
+        KIMI_HOOK_ASSET.contains("agent_session_id")
+            || KIMI_HOOK_ASSET.contains("--agent-session-id")
+    );
+    assert!(
+        KIMI_HOOK_ASSET.contains("method = \"pane.report_agent_session\"")
+            || KIMI_HOOK_ASSET.contains("report-agent-session")
+    );
+    assert!(
+        KIMI_HOOK_ASSET.contains("params[\"session_start_source\"] = \"startup\"")
+            || KIMI_HOOK_ASSET.contains("--session-start-source startup")
+    );
+    assert!(
+        KIMI_HOOK_ASSET.contains("method = \"pane.report_agent\"")
+            || KIMI_HOOK_ASSET.contains("report-agent")
+    );
+    assert!(
+        KIMI_HOOK_ASSET.contains("params[\"state\"] = action")
+            || KIMI_HOOK_ASSET.contains("--state $Action")
+    );
     assert!(!KIMI_HOOK_ASSET.contains("pane.release_agent"));
-    assert!(COPILOT_HOOK_ASSET.contains("agent_session_id"));
-    assert!(COPILOT_HOOK_ASSET.contains("pane.report_agent_session"));
+    assert!(
+        COPILOT_HOOK_ASSET.contains("agent_session_id")
+            || COPILOT_HOOK_ASSET.contains("--agent-session-id")
+    );
+    assert!(
+        COPILOT_HOOK_ASSET.contains("pane.report_agent_session")
+            || COPILOT_HOOK_ASSET.contains("report-agent-session")
+    );
     assert!(!COPILOT_HOOK_ASSET.contains("\"state\":"));
     assert!(!COPILOT_HOOK_ASSET.contains("pane.release_agent"));
     assert!(DEVIN_HOOK_ASSET.contains("HIVE_DEVIN_LIST_JSON"));
@@ -2732,8 +2786,14 @@ fn bundled_integration_assets_report_session_refs() {
     assert!(!DEVIN_HOOK_ASSET.contains("\"state\":"));
     assert!(!DEVIN_HOOK_ASSET.contains("pane.release_agent"));
     assert!(DEVIN_HOOK_ASSET.contains("agent_session_id"));
-    assert!(DROID_HOOK_ASSET.contains("agent_session_id"));
-    assert!(DROID_HOOK_ASSET.contains("pane.report_agent_session"));
+    assert!(
+        DROID_HOOK_ASSET.contains("agent_session_id")
+            || DROID_HOOK_ASSET.contains("--agent-session-id")
+    );
+    assert!(
+        DROID_HOOK_ASSET.contains("pane.report_agent_session")
+            || DROID_HOOK_ASSET.contains("report-agent-session")
+    );
     assert!(!DROID_HOOK_ASSET.contains("\"state\": action"));
     assert!(!DROID_HOOK_ASSET.contains("pane.release_agent"));
     assert!(OPENCODE_PLUGIN_ASSET.contains("properties?.sessionID"));
@@ -2741,7 +2801,7 @@ fn bundled_integration_assets_report_session_refs() {
     assert!(OPENCODE_PLUGIN_ASSET.contains("pane.report_agent_session"));
     assert!(OPENCODE_PLUGIN_ASSET.contains("reportState"));
     assert!(!OPENCODE_PLUGIN_ASSET.contains("pane.release_agent"));
-    assert!(KILO_PLUGIN_ASSET.contains("SOURCE = \"herdr:kilo\""));
+    assert!(KILO_PLUGIN_ASSET.contains("SOURCE = \"hive:kilo\""));
     assert!(KILO_PLUGIN_ASSET.contains("AGENT = \"kilo\""));
     assert!(KILO_PLUGIN_ASSET.contains("pane.report_agent_session"));
     assert!(KILO_PLUGIN_ASSET.contains("session_start_source: \"startup\""));
@@ -2776,7 +2836,7 @@ fn bundled_integration_assets_report_session_refs() {
     assert!(GROK_HOOK_ASSET.contains("sessionId"));
     assert!(GROK_HOOK_ASSET.contains("agent_session_id"));
     assert!(GROK_HOOK_ASSET.contains("pane.report_agent_session"));
-    assert!(GROK_HOOK_ASSET.contains("herdr:grok"));
+    assert!(GROK_HOOK_ASSET.contains("hive:grok"));
     assert!(!GROK_HOOK_ASSET.contains("\"state\":"));
     assert!(!GROK_HOOK_ASSET.contains("pane.release_agent"));
 }
@@ -3137,7 +3197,7 @@ fn install_cursor_writes_hook_and_updates_hooks_json() {
         .and_then(Value::as_str)
         .is_some_and(|command| {
             command.starts_with("bash ")
-                && command.contains("herdr-agent-state.sh")
+                && command.contains("hive-agent-state.sh")
                 && command.ends_with(" session")
         }));
     assert!(hooks.get("beforeSubmitPrompt").is_none());
@@ -3368,7 +3428,7 @@ fn install_grok_writes_hook_and_config() {
     assert_eq!(session_start.len(), 1);
     let command = grok_session_command(&config);
     assert!(command.starts_with("sh "));
-    assert!(command.contains("herdr-agent-state.sh"));
+    assert!(command.contains("hive-agent-state.sh"));
     assert!(command.ends_with(" session"));
 
     std::env::remove_var(GROK_CONFIG_DIR_ENV_VAR);

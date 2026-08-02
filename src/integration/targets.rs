@@ -40,12 +40,12 @@ use super::{
     GROK_HOOK_CONFIG_INSTALL_NAME, GROK_HOOK_INSTALL_NAME, HERMES_PLUGIN_INIT_ASSET,
     HERMES_PLUGIN_INIT_INSTALL_NAME, HERMES_PLUGIN_MANIFEST_ASSET,
     HERMES_PLUGIN_MANIFEST_INSTALL_NAME, KILO_PLUGIN_ASSET, KILO_PLUGIN_INSTALL_NAME,
-    KIMI_HOOK_ASSET, KIMI_HOOK_INSTALL_NAME, MASTRACODE_HOOK_ASSET, MASTRACODE_HOOK_EVENTS,
-    MASTRACODE_HOOK_INSTALL_NAME, MASTRACODE_HOOK_TIMEOUT_MS, MASTRACODE_REMOVED_HOOK_EVENTS,
-    OMP_EXTENSION_ASSET, OMP_EXTENSION_INSTALL_NAME, OPENCODE_PLUGIN_ASSET,
-    OPENCODE_PLUGIN_INSTALL_NAME, PI_EXTENSION_ASSET, PI_EXTENSION_INSTALL_NAME,
-    QODERCLI_HOOK_ASSET, QODERCLI_HOOK_EVENTS, QODERCLI_HOOK_INSTALL_NAME,
-    QODERCLI_REMOVED_LIFECYCLE_HOOK_EVENTS,
+    KIMI_HOOK_ASSET, KIMI_HOOK_INSTALL_NAME, LEGACY_OMP_EXTENSION_INSTALL_NAME,
+    MASTRACODE_HOOK_ASSET, MASTRACODE_HOOK_EVENTS, MASTRACODE_HOOK_INSTALL_NAME,
+    MASTRACODE_HOOK_TIMEOUT_MS, MASTRACODE_REMOVED_HOOK_EVENTS, OMP_EXTENSION_ASSET,
+    OMP_EXTENSION_INSTALL_NAME, OPENCODE_PLUGIN_ASSET, OPENCODE_PLUGIN_INSTALL_NAME,
+    PI_EXTENSION_ASSET, PI_EXTENSION_INSTALL_NAME, QODERCLI_HOOK_ASSET, QODERCLI_HOOK_EVENTS,
+    QODERCLI_HOOK_INSTALL_NAME, QODERCLI_REMOVED_LIFECYCLE_HOOK_EVENTS,
 };
 
 fn ensure_extension_dir(dir: &Path, agent: &str) -> io::Result<()> {
@@ -81,12 +81,14 @@ pub(crate) fn install_omp() -> io::Result<OmpInstallPaths> {
     }
     ensure_extension_dir(&dir, "omp")?;
 
+    let removed_legacy_omp_extension = remove_legacy_omp_extension_from_omp_dir(&dir)?;
     let removed_legacy_pi_extension = remove_legacy_pi_extension_from_omp_dir(&dir)?;
     let extension_path = dir.join(OMP_EXTENSION_INSTALL_NAME);
     fs::write(&extension_path, OMP_EXTENSION_ASSET)?;
     Ok(OmpInstallPaths {
         extension_path,
         removed_legacy_pi_extension,
+        removed_legacy_omp_extension,
     })
 }
 
@@ -98,6 +100,21 @@ pub(crate) fn remove_legacy_pi_extension_from_omp_dir(dir: &Path) -> io::Result<
 
     let content = fs::read_to_string(&legacy_path)?;
     if content.contains("HIVE_INTEGRATION_ID=pi") || content.contains("HERDR_INTEGRATION_ID=pi") {
+        fs::remove_file(legacy_path)?;
+        return Ok(true);
+    }
+
+    Ok(false)
+}
+
+pub(crate) fn remove_legacy_omp_extension_from_omp_dir(dir: &Path) -> io::Result<bool> {
+    let legacy_path = dir.join(LEGACY_OMP_EXTENSION_INSTALL_NAME);
+    if !legacy_path.is_file() {
+        return Ok(false);
+    }
+
+    let content = fs::read_to_string(&legacy_path)?;
+    if content.contains("HIVE_INTEGRATION_ID=omp") || content.contains("HERDR_INTEGRATION_ID=omp") {
         fs::remove_file(legacy_path)?;
         return Ok(true);
     }

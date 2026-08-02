@@ -1177,7 +1177,7 @@ mod tests {
     fn windows_shells_round_trip_agent_arguments_through_a_real_command() {
         let _lock = crate::integration::integration_env_lock();
         let base = std::env::temp_dir().join(format!(
-            "herdr-agent-argv-{}-{}",
+            "hive-agent-argv-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -1379,7 +1379,7 @@ mod tests {
     #[test]
     fn detached_custom_command_preserves_quoted_command_tail() {
         let path = std::env::temp_dir().join(format!(
-            "herdr-raw-command-quotes-{}.txt",
+            "hive-raw-command-quotes-{}.txt",
             std::process::id()
         ));
         let command = format!(r#"echo "hi" > "{}""#, path.display());
@@ -1397,7 +1397,7 @@ mod tests {
 
     #[test]
     fn windows_process_cwd_reads_child_launch_directory() {
-        let cwd = std::env::temp_dir().join(format!("herdr-cwd-test-{}", std::process::id()));
+        let cwd = std::env::temp_dir().join(format!("hive-cwd-test-{}", std::process::id()));
         fs::create_dir_all(&cwd).expect("create cwd fixture");
 
         let shell =

@@ -63,7 +63,7 @@ impl App {
                 })
             })
             .ok_or_else(|| {
-                "Herdr worktree actions require a workspace inside a Git work tree.".to_string()
+                "Hive worktree actions require a workspace inside a Git work tree.".to_string()
             })?;
         let source_checkout_path = existing_membership
             .as_ref()
@@ -134,7 +134,7 @@ impl App {
             .is_some_and(|space| space.is_linked_worktree)
         {
             self.state.config_diagnostic =
-                Some("This workspace is not a Herdr-managed worktree checkout.".into());
+                Some("This workspace is not a Hive-managed worktree checkout.".into());
             return;
         }
         let Some(space) = ws.worktree_space().cloned() else {
@@ -1027,7 +1027,7 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_nanos())
             .unwrap_or(0);
-        std::env::temp_dir().join(format!("herdr-{name}-{}-{nanos}", std::process::id()))
+        std::env::temp_dir().join(format!("hive-{name}-{}-{nanos}", std::process::id()))
     }
 
     fn run_git(repo: &std::path::Path, args: &[&str]) {
@@ -1738,7 +1738,7 @@ mod tests {
         });
         let plugin_root = unique_temp_path("app-worktree-create-plugin");
         std::fs::create_dir_all(&plugin_root).unwrap();
-        let manifest_path = plugin_root.join("herdr-plugin.toml");
+        let manifest_path = plugin_root.join("hive-plugin.toml");
         std::fs::write(&manifest_path, "id = 'example.ui-worktree-create'\n").unwrap();
         app.state.installed_plugins.insert(
             "example.ui-worktree-create".into(),
@@ -1746,7 +1746,7 @@ mod tests {
                 plugin_id: "example.ui-worktree-create".into(),
                 name: "UI Worktree Create".into(),
                 version: "0.1.0".into(),
-                min_herdr_version: "0.7.0".into(),
+                min_hive_version: "0.7.0".into(),
                 description: None,
                 manifest_path: manifest_path.display().to_string(),
                 plugin_root: plugin_root.display().to_string(),

@@ -1,5 +1,5 @@
 use crate::api::schema::{Method, NotificationShowParams, NotificationShowSound, Request};
-use crate::config::ToastHerdrPosition;
+use crate::config::ToastHivePosition;
 
 pub(super) fn run_notification_command(args: &[String]) -> std::io::Result<i32> {
     let Some(subcommand) = args.first().map(|arg| arg.as_str()) else {
@@ -25,7 +25,7 @@ fn notification_show(args: &[String]) -> std::io::Result<i32> {
         Ok(params) => params,
         Err(NotificationShowArgError::Usage) => {
             eprintln!(
-                "usage: herdr notification show <title> [--body TEXT] [--position top-left|top-right|bottom-left|bottom-right] [--sound none|done|request]"
+                "usage: hive notification show <title> [--body TEXT] [--position top-left|top-right|bottom-left|bottom-right] [--sound none|done|request]"
             );
             return Ok(2);
         }
@@ -106,12 +106,12 @@ fn parse_notification_show_args(
     })
 }
 
-fn parse_toast_position(value: &str) -> Result<ToastHerdrPosition, NotificationShowArgError> {
+fn parse_toast_position(value: &str) -> Result<ToastHivePosition, NotificationShowArgError> {
     match value {
-        "top-left" => Ok(ToastHerdrPosition::TopLeft),
-        "top-right" => Ok(ToastHerdrPosition::TopRight),
-        "bottom-left" => Ok(ToastHerdrPosition::BottomLeft),
-        "bottom-right" => Ok(ToastHerdrPosition::BottomRight),
+        "top-left" => Ok(ToastHivePosition::TopLeft),
+        "top-right" => Ok(ToastHivePosition::TopRight),
+        "bottom-left" => Ok(ToastHivePosition::BottomLeft),
+        "bottom-right" => Ok(ToastHivePosition::BottomRight),
         _ => Err(NotificationShowArgError::Message(format!(
             "invalid position: {value} (expected top-left, top-right, bottom-left, or bottom-right)"
         ))),
@@ -164,7 +164,7 @@ mod tests {
             NotificationShowParams {
                 title: "build failed".into(),
                 body: Some("api workspace".into()),
-                position: Some(ToastHerdrPosition::TopRight),
+                position: Some(ToastHivePosition::TopRight),
                 sound: NotificationShowSound::Request,
             }
         );
