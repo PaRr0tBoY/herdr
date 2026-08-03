@@ -365,11 +365,7 @@ fn agent_start_reports_detected_kind_mismatch_before_released_name() {
     let bin = base.join("bin");
     fs::create_dir_all(&bin).unwrap();
     let fake_pi = bin.join("pi");
-    fs::write(
-        &fake_pi,
-        "#!/bin/sh\nHIVE_AGENT=codex exec /bin/sleep 10\n",
-    )
-    .unwrap();
+    fs::write(&fake_pi, "#!/bin/sh\nHIVE_AGENT=codex exec /bin/sleep 10\n").unwrap();
     fs::set_permissions(&fake_pi, fs::Permissions::from_mode(0o755)).unwrap();
 
     let herdr = spawn_herdr_with_path(&config_home, &runtime_dir, &socket_path, Some(&bin));
