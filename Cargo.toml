@@ -1,6 +1,6 @@
 [package]
 name = "hive"
-version = "2026.7.29"
+version = "2026.8.3"
 edition = "2021"
 build = "build.rs"
 description = "terminal workspace manager for AI coding agents"
