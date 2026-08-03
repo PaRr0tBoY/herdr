@@ -76,10 +76,10 @@ class ChangelogScriptTests(unittest.TestCase):
         self.assertEqual(
             manifest["assets"],
             {
-                "linux-x86_64": "https://github.com/ogulcancelik/herdr/releases/download/v0.1.1/herdr-linux-x86_64",
-                "linux-aarch64": "https://github.com/ogulcancelik/herdr/releases/download/v0.1.1/herdr-linux-aarch64",
-                "macos-x86_64": "https://github.com/ogulcancelik/herdr/releases/download/v0.1.1/herdr-macos-x86_64",
-                "macos-aarch64": "https://github.com/ogulcancelik/herdr/releases/download/v0.1.1/herdr-macos-aarch64",
+                "linux-x86_64": "https://github.com/PaRr0tBoY/hive/releases/download/v0.1.1/hive-linux-x86_64",
+                "linux-aarch64": "https://github.com/PaRr0tBoY/hive/releases/download/v0.1.1/hive-linux-aarch64",
+                "macos-x86_64": "https://github.com/PaRr0tBoY/hive/releases/download/v0.1.1/hive-macos-x86_64",
+                "macos-aarch64": "https://github.com/PaRr0tBoY/hive/releases/download/v0.1.1/hive-macos-aarch64",
             },
         )
         self.assertEqual(manifest["releases"]["0.1.1"]["assets"], manifest["assets"])
@@ -288,10 +288,10 @@ class ChangelogScriptTests(unittest.TestCase):
                 "isPrerelease": False,
                 "body": "### Fixed\n- One\n",
                 "assets": [
-                    {"name": "herdr-linux-x86_64", "url": "https://example.com/linux-x86_64"},
-                    {"name": "herdr-linux-aarch64", "url": "https://example.com/linux-aarch64"},
-                    {"name": "herdr-macos-x86_64", "url": "https://example.com/macos-x86_64"},
-                    {"name": "herdr-macos-aarch64", "url": "https://example.com/macos-aarch64"},
+                    {"name": "hive-linux-x86_64", "url": "https://example.com/linux-x86_64"},
+                    {"name": "hive-linux-aarch64", "url": "https://example.com/linux-aarch64"},
+                    {"name": "hive-macos-x86_64", "url": "https://example.com/macos-x86_64"},
+                    {"name": "hive-macos-aarch64", "url": "https://example.com/macos-aarch64"},
                 ],
             },
             "0.1.1",
@@ -320,10 +320,10 @@ class ChangelogScriptTests(unittest.TestCase):
                 "isPrerelease": False,
                 "body": "### Fixed\n- One\n",
                 "assets": [
-                    {"name": "herdr-linux-x86_64", "url": "https://example.com/linux-x86_64"},
-                    {"name": "herdr-linux-aarch64", "url": "https://example.com/linux-aarch64"},
-                    {"name": "herdr-macos-x86_64", "url": "https://example.com/macos-x86_64"},
-                    {"name": "herdr-macos-aarch64", "url": "https://example.com/macos-aarch64"},
+                    {"name": "hive-linux-x86_64", "url": "https://example.com/linux-x86_64"},
+                    {"name": "hive-linux-aarch64", "url": "https://example.com/linux-aarch64"},
+                    {"name": "hive-macos-x86_64", "url": "https://example.com/macos-x86_64"},
+                    {"name": "hive-macos-aarch64", "url": "https://example.com/macos-aarch64"},
                 ],
             },
             "0.1.1",
@@ -333,7 +333,7 @@ class ChangelogScriptTests(unittest.TestCase):
         self.assertEqual(manifest["protocol"], 42)
 
     def test_manifest_from_release_payload_rejects_missing_asset(self) -> None:
-        with self.assertRaisesRegex(ChangelogError, "missing asset herdr-macos-aarch64"):
+        with self.assertRaisesRegex(ChangelogError, "missing asset hive-macos-aarch64"):
             manifest_from_release_payload(
                 {
                     "tagName": "v0.1.1",
@@ -341,9 +341,9 @@ class ChangelogScriptTests(unittest.TestCase):
                     "isPrerelease": False,
                     "body": "### Fixed\n- One\n",
                     "assets": [
-                        {"name": "herdr-linux-x86_64", "url": "https://example.com/linux-x86_64"},
-                        {"name": "herdr-linux-aarch64", "url": "https://example.com/linux-aarch64"},
-                        {"name": "herdr-macos-x86_64", "url": "https://example.com/macos-x86_64"},
+                        {"name": "hive-linux-x86_64", "url": "https://example.com/linux-x86_64"},
+                        {"name": "hive-linux-aarch64", "url": "https://example.com/linux-aarch64"},
+                        {"name": "hive-macos-x86_64", "url": "https://example.com/macos-x86_64"},
                     ],
                 },
                 "0.1.1",
