@@ -632,21 +632,25 @@ impl WindowsInputMapper {
         key: WindowsKeyRecord,
         kind: crate::protocol::ClientKeyKind,
     ) -> Option<crate::protocol::ClientInputEvent> {
-        let mut modifiers = windows_key_modifiers(key.control_key_state);
-
-        // Windows VT input mode strips SHIFT from Enter's
-        // dwControlKeyState. Fall back to physical key state.
-        if key.virtual_key_code == 0x0d
-            && !modifiers.contains(crossterm::event::KeyModifiers::SHIFT)
-        {
-            extern "system" {
-                fn GetAsyncKeyState(vKey: i32) -> i16;
+        let modifiers = windows_key_modifiers(key.control_key_state);
+        #[cfg(windows)]
+        let modifiers = {
+            let mut modifiers = modifiers;
+            // Windows VT input mode strips SHIFT from Enter's
+            // dwControlKeyState. Fall back to physical key state.
+            if key.virtual_key_code == 0x0d
+                && !modifiers.contains(crossterm::event::KeyModifiers::SHIFT)
+            {
+                extern "system" {
+                    fn GetAsyncKeyState(vKey: i32) -> i16;
+                }
+                const VK_SHIFT: i32 = 0x10;
+                if unsafe { GetAsyncKeyState(VK_SHIFT) } as u16 & 0x8000 != 0 {
+                    modifiers |= crossterm::event::KeyModifiers::SHIFT;
+                }
             }
-            const VK_SHIFT: i32 = 0x10;
-            if unsafe { GetAsyncKeyState(VK_SHIFT) } as u16 & 0x8000 != 0 {
-                modifiers |= crossterm::event::KeyModifiers::SHIFT;
-            }
-        }
+            modifiers
+        };
 
         if key.virtual_key_code == 0 {
             let codepoint = self.utf16_unit_to_char(key.unicode)?;
