@@ -9,14 +9,14 @@ platforms = ["linux", "macos", "windows"]
 id = "workspace-list"
 title = "List workspaces"
 contexts = ["workspace"]
-command = ["herdr", "workspace", "list"]
+command = ["hive", "workspace", "list"]
 
 [[events]]
 on = "worktree.created"
-command = ["herdr", "plugin", "log", "list", "--plugin", "example.smoke"]
+command = ["hive", "plugin", "log", "list", "--plugin", "example.smoke"]
 
 [[panes]]
 id = "board"
 title = "Board"
 placement = "overlay"
-command = ["herdr", "workspace", "list"]
+command = ["hive", "workspace", "list"]

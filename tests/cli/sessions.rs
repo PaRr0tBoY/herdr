@@ -132,7 +132,7 @@ fn named_sessions_use_separate_servers_and_workspace_state() {
     assert!(alpha_session["socket_path"]
         .as_str()
         .unwrap()
-        .ends_with("/sessions/alpha/herdr.sock"));
+        .ends_with("/sessions/alpha/hive.sock"));
     assert!(beta_session["session_dir"]
         .as_str()
         .unwrap()
@@ -204,7 +204,7 @@ fn integration_commands_run_locally_when_server_is_missing() {
 
     let workspace_list = Command::new(env!("CARGO_BIN_EXE_hive"))
         .args(["workspace", "list"])
-        .env("HERDR_SOCKET_PATH", &missing_socket)
+        .env("HIVE_SOCKET_PATH", &missing_socket)
         .env("HOME", &home_dir)
         .output()
         .unwrap();
@@ -212,7 +212,7 @@ fn integration_commands_run_locally_when_server_is_missing() {
 
     let integration_install = Command::new(env!("CARGO_BIN_EXE_hive"))
         .args(["integration", "install", "pi"])
-        .env("HERDR_SOCKET_PATH", &missing_socket)
+        .env("HIVE_SOCKET_PATH", &missing_socket)
         .env("HOME", &home_dir)
         .output()
         .unwrap();
@@ -224,7 +224,7 @@ fn integration_commands_run_locally_when_server_is_missing() {
 
     let integration_status = Command::new(env!("CARGO_BIN_EXE_hive"))
         .args(["integration", "status"])
-        .env("HERDR_SOCKET_PATH", &missing_socket)
+        .env("HIVE_SOCKET_PATH", &missing_socket)
         .env("HOME", &home_dir)
         .output()
         .unwrap();
@@ -235,7 +235,7 @@ fn integration_commands_run_locally_when_server_is_missing() {
 
     let integration_uninstall = Command::new(env!("CARGO_BIN_EXE_hive"))
         .args(["integration", "uninstall", "pi"])
-        .env("HERDR_SOCKET_PATH", &missing_socket)
+        .env("HIVE_SOCKET_PATH", &missing_socket)
         .env("HOME", &home_dir)
         .output()
         .unwrap();
@@ -267,7 +267,7 @@ fn integration_status_outdated_only_prints_action_for_legacy_install() {
 
     let output = Command::new(env!("CARGO_BIN_EXE_hive"))
         .args(["integration", "status", "--outdated-only"])
-        .env("HERDR_SOCKET_PATH", &missing_socket)
+        .env("HIVE_SOCKET_PATH", &missing_socket)
         .env("HOME", &home_dir)
         .output()
         .unwrap();
@@ -293,7 +293,7 @@ fn integration_status_rejects_unknown_flags() {
 
     let output = Command::new(env!("CARGO_BIN_EXE_hive"))
         .args(["integration", "status", "--wat"])
-        .env("HERDR_SOCKET_PATH", &missing_socket)
+        .env("HIVE_SOCKET_PATH", &missing_socket)
         .env("HOME", &home_dir)
         .output()
         .unwrap();
@@ -308,7 +308,7 @@ fn status_commands_report_client_and_server_versions() {
     let base = unique_test_dir();
     let config_home = base.join("config");
     let runtime_dir = base.join("runtime");
-    let socket_path = runtime_dir.join("herdr.sock");
+    let socket_path = runtime_dir.join("hive.sock");
 
     let herdr = spawn_herdr(&config_home, &runtime_dir, &socket_path);
     wait_for_socket(&socket_path, Duration::from_secs(5));
@@ -444,8 +444,8 @@ fn server_stop_command_shuts_down_running_server() {
     let base = unique_test_dir();
     let config_home = base.join("config");
     let runtime_dir = base.join("runtime");
-    let socket_path = runtime_dir.join("herdr.sock");
-    let client_socket = runtime_dir.join("herdr-client.sock");
+    let socket_path = runtime_dir.join("hive.sock");
+    let client_socket = runtime_dir.join("hive-client.sock");
 
     let mut herdr = spawn_herdr(&config_home, &runtime_dir, &socket_path);
     wait_for_socket(&socket_path, Duration::from_secs(5));
@@ -484,8 +484,8 @@ fn server_stop_then_restart_restores_pane_history() {
     let base = unique_test_dir();
     let config_home = base.join("config");
     let runtime_dir = base.join("runtime");
-    let socket_path = runtime_dir.join("herdr.sock");
-    let client_socket = runtime_dir.join("herdr-client.sock");
+    let socket_path = runtime_dir.join("hive.sock");
+    let client_socket = runtime_dir.join("hive-client.sock");
     let marker = "PERSISTED_HISTORY_AFTER_STOP";
 
     let mut herdr = spawn_herdr_with_pane_history(&config_home, &runtime_dir, &socket_path);
@@ -576,8 +576,8 @@ fn server_start_restores_legacy_session_through_api_identity() {
     let base = unique_test_dir();
     let config_home = base.join("config");
     let runtime_dir = base.join("runtime");
-    let socket_path = runtime_dir.join("herdr.sock");
-    let client_socket = runtime_dir.join("herdr-client.sock");
+    let socket_path = runtime_dir.join("hive.sock");
+    let client_socket = runtime_dir.join("hive-client.sock");
     let data_dir = config_home.join(app_dir_name());
     let pion_cwd = base.join("legacy-pion");
     let herdr_cwd = base.join("legacy-herdr");
