@@ -1131,7 +1131,7 @@ impl TerminalState {
                 pending_replacement_report: None,
             });
         let session_ref_kind = session_ref.kind;
-        let replace_pending = seq.map_or(true, |seq| {
+        let replace_pending = seq.is_none_or(|seq| {
             suppressed
                 .pending_replacement_report
                 .as_ref()
