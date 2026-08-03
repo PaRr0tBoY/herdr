@@ -353,41 +353,79 @@ jobs:
             artifacts/hive-macos-aarch64/hive-macos-aarch64
             artifacts/hive-windows-x86_64.zip/hive-windows-x86_64.zip
 
-      - name: Update preview manifest
-        run: |
-          python3 scripts/preview.py manifest \
-            --output website/preview.json \
-            --tag '${{ needs.preflight.outputs.tag }}' \
-            --build-id '${{ needs.preflight.outputs.build_id }}' \
-            --commit '${{ needs.preflight.outputs.commit }}' \
-            --built-at '${{ needs.preflight.outputs.built_at }}' \
-            --base-version '${{ needs.preflight.outputs.base_version }}' \
-            --protocol '${{ needs.preflight.outputs.protocol }}' \
-            --notes PREVIEW_NOTES.md \
-            --sha-file preview-sha256.json \
-            --retain 30
 
-      - name: Commit preview manifest
+      - name: Publish preview manifest to GitHub Pages
         env:
-          KANGAL_GITHUB_TOKEN: ${{ secrets.KANGAL_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
+          build_id="${{ needs.preflight.outputs.build_id }}"
+          commit="${{ needs.preflight.outputs.commit }}"
+          built_at="${{ needs.preflight.outputs.built_at }}"
+          base_version="${{ needs.preflight.outputs.base_version }}"
+          protocol="${{ needs.preflight.outputs.protocol }}"
+          tag="${{ needs.preflight.outputs.tag }}"
+          notes=$(cat PREVIEW_NOTES.md)
+          pages_repo="PaRr0tBoY/PaRr0tBoY.github.io"
+          manifest_path="product/Hive/install/preview.json"
+
+          # Build manifest JSON with SHA256 from artifacts
+          json=$(python3 -c "
+import hashlib, json, pathlib
+assets = {}
+for d in pathlib.Path('artifacts').iterdir():
+    if not d.is_dir():
+        continue
+    for sha_file in d.glob('*.sha256'):
+        sha, name = sha_file.read_text().split()[:2]
+        key = name \
+            .removeprefix('hive-') \
+            .removesuffix('.exe') \
+            .removesuffix('.zip')
+        fmt = 'zip' if name.endswith('.zip') else 'exe'
+        assets[key] = {
+            'url': f'https://github.com/PaRr0tBoY/herdr/releases/download/{tag}/{name}',
+            'sha256': sha,
+            'format': fmt,
+        }
+manifest = {
+    'schema_version': 1,
+    'channel': 'preview',
+    'base_version': '$base_version',
+    'build_id': '$build_id',
+    'commit': '$commit',
+    'built_at': '$built_at',
+    'protocol': $protocol,
+    'notes': '''$notes''',
+    'assets': assets,
+}
+print(json.dumps(manifest, indent=2))
+")
+
+          # Clone GitHub Pages repo, write manifest, push
+          tmpdir=$(mktemp -d)
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${pages_repo}.git" "$tmpdir"
+          mkdir -p "$tmpdir/$(dirname $manifest_path)"
+          echo "$json" > "$tmpdir/$manifest_path"
+          cd "$tmpdir"
           git config user.name "kangal-bot"
           git config user.email "285672167+kangal-bot@users.noreply.github.com"
-          git add website/preview.json
-          git diff --cached --quiet || git commit -m "docs: update preview manifest"
-          remote="https://x-access-token:${KANGAL_GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git add "$manifest_path"
+          git diff --cached --quiet || git commit -m "Hive: update preview manifest for $build_id"
           for attempt in 1 2 3; do
-            git pull --rebase "$remote" master
-            if git push "$remote" HEAD:master; then
+            git pull --rebase origin main
+            if git push origin main; then
+              echo "Published preview manifest to ${pages_repo}/${manifest_path}"
               exit 0
             fi
             if [ "$attempt" -lt 3 ]; then
-              echo "master changed during preview publishing; retrying ($attempt/3)"
+              echo "main changed during manifest publishing; retrying ($attempt/3)"
               sleep $((attempt * 2))
             fi
           done
           echo "failed to publish preview manifest after 3 attempts" >&2
           exit 1
+
 
       - name: Mark preview-released issues
         continue-on-error: true
