@@ -34,7 +34,7 @@ Invoke-Checked cargo @("fmt", "--check")
 Invoke-CargoWithZigCacheRecovery @(
     "clippy",
     "--bin",
-    "herdr",
+    "hive",
     "--locked",
     "--target",
     "x86_64-pc-windows-msvc",
@@ -53,7 +53,7 @@ Invoke-Checked cargo @(
     "--target",
     "x86_64-pc-windows-msvc",
     "--bin",
-    "herdr",
+    "hive",
     "windows_"
 )
 Invoke-Checked cargo @(
@@ -62,7 +62,7 @@ Invoke-Checked cargo @(
     "--target",
     "x86_64-pc-windows-msvc",
     "--bin",
-    "herdr",
+    "hive",
     "server::client_transport::tests"
 )
 Invoke-Checked cargo @("build", "--locked", "--target", "x86_64-pc-windows-msvc")
